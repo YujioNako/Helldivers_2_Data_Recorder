@@ -1,9 +1,10 @@
 # Helldivers_2_Data_Recorder
-Record data from public api (helldiverscompanion.com)
+A Python-based tool for recording and analyzing data from the Helldivers 2 game using the public API from helldiverscompanion.com.
 
 ## How to Start
-* Install requirements
-* Set your config in `config.py`
+* Clone the repository
+* Install dependencies in global or virtual environment
+* Set your config in `config.py` (Including IP, port, poll interval, etc.)
 * Run `run.py` for monitor and web server (You can run monitor with `monitor.py`, and run web server with `app.py` too)
 * Open the url set in your `config.py` and surf the data
 
@@ -402,11 +403,11 @@ GET /api/news/types
 ```json
 [
   {
-    "type": 1,
+    "type": 0,
     "count": 45
   },
   {
-    "type": 2,
+    "type": 1,
     "count": 30
   }
 ]
@@ -426,11 +427,11 @@ GET /api/news/stats
   "recent_24h_count": 5,
   "type_breakdown": [
     {
-      "type": 1,
+      "type": 0,
       "count": 45
     },
     {
-      "type": 2,
+      "type": 1,
       "count": 30
     }
   ]
