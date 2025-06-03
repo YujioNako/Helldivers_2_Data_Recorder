@@ -2427,7 +2427,7 @@
 
         async function displayOrderDetails(orderId, timeRange = 48) {
             try {
-                const response = await fetch(`/api/major-order-progress-history/${orderId}?hours=${timeRange}&limit=100`);
+                const response = await fetch(`/api/major-order-progress-history/${orderId}?hours=${timeRange}&limit=1000`);
                 const data = await response.json();
                 
                 if (data.error) {
