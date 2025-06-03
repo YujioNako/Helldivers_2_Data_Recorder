@@ -20,13 +20,7 @@ def get_db_connection():
     return conn
 
 # 数据限制配置
-DATA_LIMITS = {
-    'default_hours': 24,
-    'max_data_points': 100,
-    'chart_data_points': 50,
-    'news_default_limit': 20,
-    'news_max_limit': 100
-}
+DATA_LIMITS = Config.DATA_LIMITS
 
 @app.route('/')
 def dashboard():
@@ -310,7 +304,7 @@ def planet_health_history(planet_index):
     """获取星球生命值历史（限制数据点）"""
     try:
         conn = get_db_connection()
-        hours = request.args.get('hours', 24, type=int)
+        hours = request.args.get('hours', DATA_LIMITS['default_hours'], type=int)
         limit = request.args.get('limit', DATA_LIMITS['chart_data_points'], type=int)
         
         since = int((datetime.now() - timedelta(hours=hours)).timestamp())
@@ -336,7 +330,7 @@ def region_health_history(planet_index, region_index):
     """获取地区生命值历史（限制数据点）"""
     try:
         conn = get_db_connection()
-        hours = request.args.get('hours', 24, type=int)
+        hours = request.args.get('hours', DATA_LIMITS['default_hours'], type=int)
         limit = request.args.get('limit', DATA_LIMITS['chart_data_points'], type=int)
         
         since = int((datetime.now() - timedelta(hours=hours)).timestamp())
@@ -388,7 +382,7 @@ def major_order_progress_history(order_id):
     """获取特定主要订单的进度历史曲线"""
     try:
         conn = get_db_connection()
-        hours = request.args.get('hours', 48, type=int)  # 默认48小时
+        hours = request.args.get('hours', DATA_LIMITS['default_hours'], type=int)  # 默认48小时
         limit = request.args.get('limit', DATA_LIMITS['chart_data_points'], type=int)
         
         since = int((datetime.now() - timedelta(hours=hours)).timestamp())
@@ -503,8 +497,8 @@ def news_list():
         offset = request.args.get('offset', 0, type=int)  # 分页偏移
         
         # 限制最大返回数量
-        if limit > DATA_LIMITS['news_max_limit']:
-            limit = DATA_LIMITS['news_max_limit']
+        if limit > DATA_LIMITS['max_data_points']:
+            limit = DATA_LIMITS['max_data_points']
         
         # 构建查询
         query = "SELECT news_id, published, type, tag_ids, message, stored_at, updated_at FROM news WHERE 1=1"
