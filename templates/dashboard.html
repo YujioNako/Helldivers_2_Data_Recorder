@@ -1332,8 +1332,9 @@
             return num.toString();
         }
 
-        function formatTimestamp(timestamp) {
-            return new Date(timestamp * 1000).toLocaleTimeString();
+        function formatTimestamp(timestamp, needYear = true) {
+            if (needYear) return new Date(timestamp * 1000).toLocaleString();
+            else return new Date(timestamp * 1000).toLocaleTimeString();
         }
         
         function updateCurrentTime() {
@@ -3179,7 +3180,7 @@
                         <div class="news-meta">
                             <div class="news-timestamp">
                                 <span>🕐 ${timeAgo}</span>
-                                <span style="margin-left: 10px; opacity: 0.7;">${formatTimestamp(news.published)}</span>
+                                <span style="margin-left: 10px; opacity: 0.7;">${formatTimestamp(news.published, false)} SCST</span>
                             </div>
                             <div class="news-type-badge type-${news.type}">
                                 ${getNewsTypeName(news.type)}
@@ -3241,8 +3242,8 @@
             
             // 处理特殊格式标记
             let formattedContent = content
-                .replace(/<i=1>(.*?)<\/i>/g, '<span style="color: #4CAF50; font-weight: bold;">$1</span>')
-                .replace(/<i=3>(.*?)<\/i>/g, '<span style="color: #f44336; font-weight: bold; text-transform: uppercase;">$1</span>')
+                .replace(/<i=1>(.*?)<\/i>/g, '<span style="color: #f44336; font-weight: bold;">$1</span>')
+                .replace(/<i=3>(.*?)<\/i>/g, '<span style="color: #4CAF50; font-weight: bold; text-transform: uppercase;">$1</span>')
                 .replace(/\n/g, '<br>');
             
             // 将内容分段
