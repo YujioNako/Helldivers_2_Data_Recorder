@@ -24,5 +24,6 @@ class Config:
         'default_hours': 24,
         'max_data_points': 100,
         'chart_data_points': 50,
-        'max_chart_datasets': 10
+        'max_chart_datasets': 10,
+        'news_default_limit': 20
     }
