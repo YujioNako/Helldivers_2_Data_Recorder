@@ -30,8 +30,8 @@ GET /api/war-status-trend
 ```
 
 **Query Parameters:**
-- `hours` (optional): Time range in hours, default 48 hours
-- `limit` (optional): Data point limit, default 500
+- `hours` (optional): Time range in hours, default 24 hours (Decided on your config)
+- `limit` (optional): Data point limit, default 50 (Decided on your config)
 
 **Response Example:**
 ```json
@@ -52,8 +52,8 @@ GET /api/war-stats-trend
 ```
 
 **Query Parameters:**
-- `hours` (optional): Time range in hours, default 48 hours
-- `limit` (optional): Data point limit, default 500
+- `hours` (optional): Time range in hours, default 24 hours (Decided on your config)
+- `limit` (optional): Data point limit, default 50 (Decided on your config)
 
 **Response Example:**
 ```json
@@ -80,7 +80,7 @@ GET /api/major-orders-progress
 ```
 
 **Query Parameters:**
-- `limit` (optional): Data limit, default 1000
+- `limit` (optional): Data limit, default 100 (Decided on your config)
 
 **Response Example:**
 ```json
@@ -107,7 +107,7 @@ GET /api/major-order-history/<int:order_id>
 - `order_id`: Order ID
 
 **Query Parameters:**
-- `limit` (optional): Data point limit, default 500
+- `limit` (optional): Data point limit, default 50 (Decided on your config)
 
 **Response Example:**
 ```json
@@ -130,8 +130,8 @@ GET /api/major-order-progress-history/<int:order_id>
 - `order_id`: Order ID
 
 **Query Parameters:**
-- `hours` (optional): Time range in hours, default 48 hours
-- `limit` (optional): Data point limit, default 500
+- `hours` (optional): Time range in hours, default 24 hours (Decided on your config)
+- `limit` (optional): Data point limit, default 50 (Decided on your config)
 
 **Response Example:**
 ```json
@@ -250,8 +250,8 @@ GET /api/planet-health-history/<int:planet_index>
 - `planet_index`: Planet index
 
 **Query Parameters:**
-- `hours` (optional): Time range in hours, default 48 hours
-- `limit` (optional): Data point limit, default 500
+- `hours` (optional): Time range in hours, default 24 hours (Decided on your config)
+- `limit` (optional): Data point limit, default 50 (Decided on your config)
 
 **Response Example:**
 ```json
@@ -276,8 +276,8 @@ GET /api/region-health-history/<int:planet_index>/<int:region_index>
 - `region_index`: Region index
 
 **Query Parameters:**
-- `hours` (optional): Time range in hours, default 48 hours
-- `limit` (optional): Data point limit, default 500
+- `hours` (optional): Time range in hours, default 24 hours (Decided on your config)
+- `limit` (optional): Data point limit, default 50 (Decided on your config)
 
 **Response Example:**
 ```json
@@ -300,8 +300,8 @@ GET /api/global-resources-trend
 ```
 
 **Query Parameters:**
-- `hours` (optional): Time range in hours, default 48 hours
-- `limit` (optional): Data point limit, default 500
+- `hours` (optional): Time range in hours, default 24 hours (Decided on your config)
+- `limit` (optional): Data point limit, default 50 (Decided on your config)
 
 **Response Example:**
 ```json
@@ -324,7 +324,7 @@ GET /api/news
 ```
 
 **Query Parameters:**
-- `limit` (optional): Return limit, default 20, maximum 1000
+- `limit` (optional): Return limit, default 20, maximum 100 (Decided on your config)
 - `type` (optional): News type filter
 - `offset` (optional): Pagination offset, default 0
 
