@@ -1,0 +1,3366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Helldivers 2 战争监控仪表盘</title>
+    <script src="/src/chart.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: #ffffff;
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #ffdd44;
+            margin: 0;
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .subtitle {
+            color: #aaa;
+            margin-top: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 5px;
+            max-width: 1000px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 12px 20px;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+        
+        .nav-tab.active {
+            background-color: #ffdd44;
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+        
+        .nav-tab:hover:not(.active) {
+            background-color: #3a3a3a;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+            max-width: 1400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #333 0%, #444 100%);
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            border-left: 4px solid #ffdd44;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(255, 221, 68, 0.2);
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #ffdd44;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .chart-container {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            border: 1px solid #444;
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #ffdd44;
+            text-align: center;
+            border-bottom: 2px solid #444;
+            padding-bottom: 10px;
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .planets-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .planets-grid {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            min-height: 600px;
+        }
+        
+        .planets-sidebar {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+        
+        .planets-main {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+            border-radius: 12px;
+            padding: 20px;
+        }
+        
+        .sector-group {
+            margin-bottom: 20px;
+        }
+        
+        .sector-header {
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            text-align: center;
+            background-color: #555;
+            color: white;
+        }
+        
+        .planet-item {
+            background-color: #3a3a3a;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid;
+            position: relative;
+        }
+        
+        .planet-item.owner-1 {
+            border-left-color: #4CAF50;
+        }
+        
+        .planet-item.owner-2 {
+            border-left-color: #8BC34A;
+        }
+        
+        .planet-item.owner-3 {
+            border-left-color: #FF9800;
+        }
+        
+        .planet-item.owner-4 {
+            border-left-color: #9C27B0;
+        }
+        
+        .planet-item:hover {
+            background-color: #4a4a4a;
+            transform: translateX(-5px);
+        }
+        
+        .planet-item.selected {
+            transform: translateX(-5px) scale(1.05);
+            background-color: #555555;
+        }
+        
+        .planet-item.critical {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255, 67, 54, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(255, 67, 54, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 67, 54, 0); }
+        }
+        
+        .planet-name {
+            font-weight: bold;
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .planet-owner-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .planet-owner-indicator.owner-1 { background-color: #4CAF50; }
+        .planet-owner-indicator.owner-2 { background-color: #8BC34A; }
+        .planet-owner-indicator.owner-3 { background-color: #FF9800; }
+        .planet-owner-indicator.owner-4 { background-color: #9C27B0; }
+        
+        .planet-status-indicator {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        .planet-status-indicator.critical { background-color: #f44336; }
+        .planet-status-indicator.gaining { background-color: #2196f3; }
+        .planet-status-indicator.losing { background-color: #f44336; }
+        .planet-status-indicator.stable { background-color: #4CAF50; }
+        .planet-status-indicator.enemy-controlled { background-color: #9E9E9E; }
+        .planet-status-indicator.losing { background-color: #f3e721; }
+        .planet-status-indicator.under-fierce-attack { background-color: #ff9800; }
+        .planet-status-indicator.contested { background-color: #ffdd44; }
+        
+        .planet-info {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+        
+        .planet-trend {
+            font-size: 0.75rem;
+            margin-top: 4px;
+        }
+        
+        .trend-positive { color: #4CAF50; }
+        .trend-negative { color: #f44336; }
+        .trend-neutral { color: #ffdd44; }
+        .trend-enemy { color: #9E9E9E; }
+        
+        .planet-details {
+            text-align: center;
+        }
+        
+        .planet-details h3 {
+            color: #ffdd44;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        
+        .planet-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .planet-stat {
+            background-color: #3a3a3a;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        .planet-stat.critical {
+            background-color: #4a2c2c!important;
+            border-left: 3px solid #f44336!important;
+        }
+        
+        .planet-stat.positive {
+            background-color: #2c4a2c!important;
+            border-left: 3px solid #4CAF50!important;
+        }
+        
+        .planet-stat.enemy {
+            background-color: #3a3a3a!important;
+            border-left: 3px solid #9E9E9E!important;
+        }
+        
+        .regions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .region-card {
+            background-color: #3a3a3a;
+            border-radius: 8px;
+            padding: 15px;
+            border-left: 4px solid #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .region-card:hover {
+            background-color: #4a4a4a;
+            transform: translateY(-2px);
+        }
+        
+        .region-card.selected {
+            transform: translateY(-2px) scale(1.05);
+            background-color: #555555;
+        }
+        
+        .region-card.owner-1 { border-left-color: #4CAF50; }
+        .region-card.owner-2 { border-left-color: #8BC34A; }
+        .region-card.owner-3 { border-left-color: #FF9800; }
+        .region-card.owner-4 { border-left-color: #9C27B0; }
+        
+        .region-card.enemy-controlled {
+            /*border-left-color: #9E9E9E;
+            background-color: #2a2a2a;*/
+        }
+        
+        .region-card.under-attack {
+            /*animation: pulse 1.5s infinite;*/
+        } 
+
+        .region-card.under-fierce-attack {
+            animation: pulse 1.2s infinite;
+            /*border-left-color: #ff9800 !important;*/
+        }
+        
+        .region-card.critical { 
+            animation: pulse 0.6s infinite;
+        }
+        
+        .region-card.losing {
+            /*border-left-color: #ffdd44 !important;*/
+        }
+        
+        .region-status.under-fierce-attack {
+            background-color: #ff9800;
+            animation: blink 1.2s infinite;
+        }
+        
+        .region-status.losing {
+            background-color: #ffdd44;
+            color: #000;
+        }
+        
+        .region-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .region-status {
+            font-size: 0.8rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background-color: #666;
+        }
+        
+        .region-status.critical { background-color: #f44336; animation: blink 1s infinite; }
+        .region-status.gaining { background-color: #2196f3; }
+        .region-status.losing { background-color: #f44336; }
+        .region-status.stable { background-color: #4CAF50; }
+        .region-status.enemy-controlled { background-color: #9E9E9E; color: #000; }
+        .region-status.losing { background-color: #f3e721; }
+        .region-status.under-fierce-attack { background-color: #ff9800; }
+        .region-status.available { background-color: #ffdd44; }
+        .region-status.contested { background-color: #ffdd44; }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+        
+        .health-bar {
+            width: 100%;
+            height: 8px;
+            background-color: #555;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .health-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff4444 0%, #ffaa00 50%, #4CAF50 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .health-fill.enemy {
+            background: linear-gradient(90deg, #9E9E9E 0%, #757575 100%);
+        }
+        
+        .region-metrics {
+            font-size: 0.85rem;
+            margin-top: 8px;
+        }
+        
+        .region-metrics .metric {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .metric-value.positive { color: #4CAF50; }
+        .metric-value.negative { color: #f44336; }
+        .metric-value.neutral { color: #ffdd44; }
+        .metric-value.enemy { color: #9E9E9E; }
+        
+        .region-charts {
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .region-charts.active {
+            display: block;
+        }
+        
+        /* 订单模块样式 */
+        .orders-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .orders-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            min-height: 600px;
+            margin-bottom: 30px;
+        }
+
+        .orders-sidebar {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+            border-radius: 12px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .orders-main {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 500px;
+        }
+
+        .order-item {
+            background-color: #3a3a3a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 4px solid #ffdd44;
+            position: relative;
+        }
+
+        .order-item:hover {
+            background-color: #4a4a4a;
+            transform: translateX(5px);
+        }
+
+        .order-item.selected {
+            background-color: #ffdd44;
+            color: #1a1a2e;
+            box-shadow: 0 4px 8px rgba(255, 221, 68, 0.3);
+        }
+
+        .order-title {
+            font-weight: bold;
+            font-size: 1rem;
+            margin-bottom: 8px;
+            color: #ffdd44;
+        }
+
+        .order-item.selected .order-title {
+            color: #1a1a2e;
+        }
+
+        .order-progress-info {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+        }
+
+        .order-brief {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            line-height: 1.3;
+        }
+
+        .order-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .order-status-active {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+        }
+
+        .order-status-expired {
+            display: inline-block;
+            background-color: #f44336;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+        }
+
+        .order-details h3 {
+            color: #ffdd44;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .order-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .order-stat {
+            background-color: #3a3a3a;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .progress-chart-container {
+            background-color: #3a3a3a;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .progress-chart-title {
+            color: #ffdd44;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .progress-chart-wrapper {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+        
+        /* 新闻模块样式 */
+        .news-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .news-header {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #444;
+        }
+        
+        .news-header h3 {
+            color: #ffdd44;
+            margin: 0 0 15px 0;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .news-header .news-icon {
+            font-size: 1.2rem;
+        }
+        
+        .news-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .news-filter {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .news-filter:hover {
+            background-color: #444;
+            border-color: #ffdd44;
+        }
+        
+        .news-filter:focus {
+            outline: none;
+            border-color: #ffdd44;
+        }
+        
+        .news-stats {
+            font-size: 0.9rem;
+            color: #aaa;
+            margin-left: auto;
+        }
+        
+        .news-feed {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+            border-radius: 12px;
+            border: 1px solid #444;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        .news-item {
+            padding: 20px;
+            border-bottom: 1px solid #444;
+            transition: background-color 0.3s ease;
+            position: relative;
+        }
+        
+        .news-item:last-child {
+            border-bottom: none;
+        }
+        
+        .news-item:hover {
+            background-color: rgba(255, 221, 68, 0.05);
+        }
+        
+        .news-item.type-0 {
+            border-left: 4px solid #4CAF50;
+        }
+        
+        .news-item.type-1 {
+            border-left: 4px solid #2196F3;
+        }
+        
+        .news-item.type-2 {
+            border-left: 4px solid #FF9800;
+        }
+        
+        .news-item.type-3 {
+            border-left: 4px solid #f44336;
+        }
+        
+        .news-item.breaking {
+            background: linear-gradient(90deg, rgba(255, 221, 68, 0.1) 0%, transparent 100%);
+            border-left: 4px solid #ffdd44;
+            animation: newsBreaking 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes newsBreaking {
+            0% { box-shadow: 0 0 5px rgba(255, 221, 68, 0.3); }
+            100% { box-shadow: 0 0 15px rgba(255, 221, 68, 0.6); }
+        }
+        
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: #aaa;
+        }
+        
+        .news-timestamp {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .news-type-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .news-type-badge.type-0 {
+            background-color: #4CAF50;
+            color: white;
+        }
+        
+        .news-type-badge.type-1 {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .news-type-badge.type-2 {
+            background-color: #FF9800;
+            color: white;
+        }
+        
+        .news-type-badge.type-3 {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .news-content {
+            line-height: 1.6;
+            font-size: 1rem;
+            color: #ffffff;
+        }
+        
+        .news-content p {
+            margin: 0 0 12px 0;
+        }
+        
+        .news-content p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .news-tags {
+            margin-top: 12px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+        
+        .news-tag {
+            background-color: #444;
+            color: #ffdd44;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.75rem;
+        }
+        
+        .news-loading {
+            padding: 20px;
+            text-align: center;
+            color: #ffdd44;
+            font-size: 1rem;
+        }
+        
+        .news-loading-more {
+            display: none;
+            padding: 15px;
+            text-align: center;
+            color: #aaa;
+            font-size: 0.9rem;
+            border-top: 1px solid #444;
+        }
+        
+        .news-loading-more.active {
+            display: block;
+        }
+        
+        .news-end-message {
+            display: none;
+            padding: 15px;
+            text-align: center;
+            color: #666;
+            font-size: 0.9rem;
+            border-top: 1px solid #444;
+            font-style: italic;
+        }
+        
+        .news-end-message.active {
+            display: block;
+        }
+        
+        .news-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+        
+        .news-error {
+            padding: 20px;
+            text-align: center;
+            color: #f44336;
+            background-color: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            border-radius: 6px;
+            margin: 20px;
+        }
+        
+        /* 新闻内容格式化 */
+        .news-content em {
+            font-style: italic;
+            color: #ffdd44;
+        }
+        
+        .news-content strong {
+            font-weight: bold;
+            color: #ffdd44;
+        }
+        
+        .news-content [i="1"] {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .news-content [i="3"] {
+            color: #f44336;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        /* 滚动条样式 */
+        .news-feed::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .news-feed::-webkit-scrollbar-track {
+            background: #2a2a2a;
+            border-radius: 4px;
+        }
+        
+        .news-feed::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+        
+        .news-feed::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+            font-size: 1.2rem;
+            color: #ffdd44;
+        }
+        
+        .error {
+            background-color: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px;
+            text-align: center;
+        }
+        
+        .data-controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .data-controls select {
+            background-color: #333;
+            color: white;
+            border: 1px solid #555;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 0 10px;
+        }
+        
+        .battle-summary {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333 100%);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ffdd44;
+        }
+        
+        .battle-summary h4 {
+            color: #ffdd44;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .battle-indicators {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .battle-indicator {
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            background-color: #3a3a3a;
+        }
+        
+        .battle-indicator.critical {
+            background-color: #4a2c2c;
+            border: 1px solid #f44336;
+        }
+        
+        .battle-indicator.stable {
+            background-color: #2c4a2c;
+            border: 1px solid #4CAF50;
+        }
+        
+        .battle-indicator.enemy {
+            background-color: #3a3a3a;
+            border: 1px solid #9E9E9E;
+        }
+        
+        .api-info {
+            background-color: #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 3px solid #2196F3;
+        }
+        
+        .api-info h4 {
+            color: #2196F3;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        .api-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .api-item {
+            background-color: #3a3a3a;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .api-label {
+            font-weight: bold;
+            color: #ffdd44;
+        }
+        
+        @media (max-width: 1024px) {
+            .orders-grid, .planets-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .orders-sidebar, .planets-sidebar {
+                max-height: 300px;
+            }
+            
+            .news-container {
+                max-width: 95%;
+            }
+            
+            .news-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .news-stats {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-tabs {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .regions-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .news-feed {
+                max-height: 70vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔥 Helldivers 2 战争监控仪表盘</h1>
+        <div class="subtitle">实时战争数据分析 | 当前时间: <span id="currentTime"></span></div>
+    </div>
+    
+    <div class="nav-tabs">
+        <button class="nav-tab active" onclick="switchTab('overview')">总览</button>
+        <button class="nav-tab" onclick="switchTab('planets')">星球战况</button>
+        <button class="nav-tab" onclick="switchTab('orders')">主要订单</button>
+        <button class="nav-tab" onclick="switchTab('news')">战争新闻</button>
+        <button class="nav-tab" onclick="switchTab('statistics')">详细统计</button>
+    </div>
+    
+    <!-- 总览标签页 -->
+    <div id="overview" class="tab-content active">
+        <div class="data-controls">
+            <label>时间范围:</label>
+            <select id="overviewTimeRange" onchange="updateOverviewData()">
+                <option value="6">6小时</option>
+                <option value="12">12小时</option>
+                <option value="24" selected>24小时</option>
+                <option value="48">48小时</option>
+                <option value="72">72小时</option>
+                <option value="168">7天</option>
+            </select>
+        </div>
+        
+        <div class="stats-grid" id="statsGrid">
+            <div class="loading">加载统计数据中...</div>
+        </div>
+        
+        <div class="charts-container">
+            <div class="chart-container">
+                <div class="chart-title">战争状态趋势</div>
+                <div class="chart-wrapper">
+                    <canvas id="warStatusChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">击杀统计趋势</div>
+                <div class="chart-wrapper">
+                    <canvas id="killStatsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">任务成功率趋势</div>
+                <div class="chart-wrapper">
+                    <canvas id="missionSuccessChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">全局资源</div>
+                <div class="chart-wrapper">
+                    <canvas id="resourcesChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">玩家活跃度分析</div>
+                <div class="chart-wrapper">
+                    <canvas id="playerActivityChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="chart-container">
+                <div class="chart-title">战争影响因子趋势</div>
+                <div class="chart-wrapper">
+                    <canvas id="impactMultiplierChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 星球战况标签页 -->
+    <div id="planets" class="tab-content">
+        <div class="planets-container">
+            <div class="planets-grid">
+                <div class="planets-sidebar">
+                    <h3 style="color: #ffdd44; margin-top: 0;">星球列表 (按Sector分组)</h3>
+                    <div id="planetsListing">
+                        <div class="loading">加载星球数据中...</div>
+                    </div>
+                </div>
+                <div class="planets-main">
+                    <div id="planetDetails" class="planet-details">
+                        <div class="loading">请选择一个星球查看详情</div>
+                    </div>
+                    
+                    <!-- 地区图表容器 -->
+                    <div id="regionCharts" class="region-charts">
+                        <!-- 新增时间选择控件 -->
+                        <div class="data-controls" style="margin-bottom: 20px;">
+                            <label>地区分析时间范围:</label>
+                            <select id="regionTimeRange" onchange="updateRegionChartsData()">
+                                <option value="6">6小时</option>
+                                <option value="12">12小时</option>
+                                <option value="24" selected>24小时</option>
+                                <option value="48">48小时</option>
+                                <option value="72">72小时</option>
+                                <option value="168">7天</option>
+                            </select>
+                        </div>
+                        
+                        <div class="chart-container">
+                            <div class="chart-title">地区战况分析</div>
+                            <div class="chart-wrapper">
+                                <canvas id="regionHealthChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="chart-container" style="margin-top: 20px;">
+                            <div class="chart-title">真实占领度变化</div>
+                            <div class="chart-wrapper">
+                                <canvas id="regionControlChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 主要订单标签页 -->
+    <div id="orders" class="tab-content">
+        <div class="data-controls">
+            <label>时间范围:</label>
+            <select id="ordersTimeRange" onchange="updateOrdersData()">
+                <option value="6">6小时</option>
+                <option value="12">12小时</option>
+                <option value="24">24小时</option>
+                <option value="48" selected>48小时</option>
+                <option value="72">72小时</option>
+                <option value="168">7天</option>
+            </select>
+        </div>
+        
+        <div class="orders-container">
+            <!-- 订单总览网格 -->
+            <div class="orders-grid">
+                <div class="orders-sidebar">
+                    <h3 style="color: #ffdd44; margin-top: 0;">活跃订单列表</h3>
+                    <div id="ordersList">
+                        <div class="loading">加载订单数据中...</div>
+                    </div>
+                </div>
+                <div class="orders-main">
+                    <div id="orderDetails" class="order-details">
+                        <div class="loading">请选择一个订单查看详细进度</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 整体统计图表 -->
+            <div class="charts-container" style="margin-top: 30px;">
+                <div class="chart-container">
+                    <div class="chart-title">所有订单整体进度概览</div>
+                    <div class="chart-wrapper">
+                        <canvas id="majorOrdersOverviewChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-title">订单时间线</div>
+                    <div id="ordersTimeline">
+                        <div class="loading">加载订单数据中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 战争新闻标签页 -->
+    <div id="news" class="tab-content">
+        <div class="news-container">
+            <!-- 新闻头部控制区 -->
+            <div class="news-header">
+                <h3>
+                    <span class="news-icon">📰</span>
+                    战争新闻中心
+                </h3>
+                <div class="news-controls">
+                    <select id="newsTypeFilter" class="news-filter" onchange="filterNewsByType()">
+                        <option value="">所有类型</option>
+                        <option value="0">常规新闻</option>
+                        <option value="1">重要通知</option>
+                        <option value="2">战况更新</option>
+                        <option value="3">紧急警报</option>
+                    </select>
+                    
+                    <button id="refreshNewsBtn" class="news-filter" onclick="refreshNews()">
+                        🔄 刷新新闻
+                    </button>
+                    
+                    <div class="news-stats" id="newsStats">
+                        <span id="newsCount">加载中...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 新闻内容区域 -->
+            <div class="news-feed" id="newsFeed">
+                <div class="news-loading">
+                    📡 正在获取最新战争情报...
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 详细统计标签页 -->
+    <div id="statistics" class="tab-content">
+        <div class="data-controls">
+            <label>时间范围:</label>
+            <select id="statsTimeRange" onchange="updateStatsData()">
+                <option value="6">6小时</option>
+                <option value="12">12小时</option>
+                <option value="24" selected>24小时</option>
+                <option value="48">48小时</option>
+                <option value="72">72小时</option>
+                <option value="168">7天</option>
+            </select>
+        </div>
+        
+        <div class="charts-container">
+            <div class="chart-container">
+                <div class="chart-title">玩家分布热力图</div>
+                <div class="chart-wrapper">
+                    <canvas id="playerDistributionChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">星球生命值趋势</div>
+                <div class="chart-wrapper">
+                    <canvas id="planetHealthTrendChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">战争强度分析</div>
+                <div class="chart-wrapper">
+                    <canvas id="warIntensityChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">阵营控制变化</div>
+                <div class="chart-wrapper">
+                    <canvas id="factionControlChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">资源收集效率</div>
+                <div class="chart-wrapper">
+                    <canvas id="resourceEfficiencyChart"></canvas>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">任务类型分析</div>
+                <div class="chart-wrapper">
+                    <canvas id="missionTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let currentPlanetData = null;
+        let currentSelectedPlanet = null;
+        let currentSelectedRegion = null;
+        let currentSelectedOrder = null;
+        let ordersData = [];
+        let allChartsData = {};
+        let planetHistoryData = {}; // 缓存历史数据用于计算真实变化率
+        
+        // 新闻相关全局变量
+        let newsData = [];
+        let newsCurrentPage = 0;
+        let newsPageSize = 5;
+        let newsIsLoading = false;
+        let newsHasMore = true;
+        let newsCurrentFilter = '';
+        let newsStats = {};
+        
+        // 工具函数
+        function formatNumber(num) {
+            if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+            return num.toString();
+        }
+
+        function formatTimestamp(timestamp) {
+            return new Date(timestamp * 1000).toLocaleTimeString();
+        }
+        
+        function updateCurrentTime() {
+            document.getElementById('currentTime').textContent = new Date().toLocaleString();
+        }
+        
+        // 计算真实占领度和变化率（基于历史数据）
+        function calculateRealControlChange(currentHealth, maxHealth, planetIndex, owner, regionIndex = null) {
+            if(owner !== 1) { currentHealth = -currentHealth };
+            let currentControl = (currentHealth / maxHealth) * 100;
+            
+            // 从历史数据中计算变化率
+            const historyKey = regionIndex !== null ? `${planetIndex}_${regionIndex}` : `${planetIndex}`;
+
+            if(true) {
+                if (planetHistoryData[historyKey] && planetHistoryData[historyKey].length > 1) {
+                    const history = planetHistoryData[historyKey];
+                    const previousData = history[history.length - 2];
+                    const currentData = history[history.length - 1];
+                    
+                    const previousControl = ((owner !== 1?-previousData.health:previousData.health) / maxHealth) * 100;
+                    const timeDiff = (currentData.timestamp - previousData.timestamp) / 3600; // 小时
+                    
+                    const controlChange = currentControl - previousControl;
+                    const changeRate = timeDiff > 0 ? controlChange / timeDiff : 0; // 每小时变化率
+                    
+                    return {
+                        currentControl: currentControl,
+                        controlChange: controlChange,
+                        changeRate: changeRate,
+                        isAccurate: true
+                    };
+                }
+            } else {
+                let previousControl = 0;
+                currentControl = 0;
+                let timeDiff = null;
+                for(regionIndex=0; ; regionIndex++) {
+                    if (planetHistoryData[historyKey+'_'+regionIndex] && planetHistoryData[historyKey+'_'+regionIndex].length > 1) {
+                        const history = planetHistoryData[historyKey+'_'+regionIndex];
+                        const previousData = history[history.length - 2];
+                        const currentData = history[history.length - 1];
+                        
+                        previousControl += ((previousData.owner === 1 ? previousData.health : 0) / 600000) * 100;
+                        currentControl += ((currentData.owner === 1 ? currentData.health : 0) / 600000) * 100;
+                        if (timeDiff === null) timeDiff = (currentData.timestamp - previousData.timestamp) / 3600; // 小时
+                    } else {
+                        if (regionIndex===0&&owner===1) {
+                            return {
+                                currentControl: 100,
+                                controlChange: 0,
+                                changeRate: 0,
+                                isAccurate: true
+                            };
+                        }
+                        const controlChange = currentControl - previousControl;
+                        const changeRate = timeDiff > 0 ? controlChange / timeDiff : 0; // 每小时变化率
+                        
+                        return {
+                            currentControl: currentControl/regionIndex,
+                            controlChange: controlChange/regionIndex,
+                            changeRate: changeRate/regionIndex,
+                            isAccurate: true
+                        };
+                    }
+                }
+            }
+            
+            return {
+                currentControl: currentControl,
+                controlChange: 0,
+                changeRate: 0,
+                isAccurate: false
+            };
+        }
+        
+        // 分析真实战况状态（基于实际数据而非API提供的数据）
+        function analyzeRealBattleStatus(regionData, controlChangeData, owner) {
+            const controlPercent = controlChangeData.currentControl;
+            const changeRate = controlChangeData.changeRate;
+            
+            // 判断是否被敌方控制
+            //if (regionData.owner !== 1) {
+            //    return {
+            //        status: 'enemy-controlled',
+            //        description: '敌方控制',
+            //        color: '#9E9E9E',
+            //        priority: 0,
+            //        isEnemyControlled: true
+            //    };
+            //}
+            
+            // 判断超级地球控制区域的战况
+            if ((controlPercent < 10 || changeRate < -3) && owner === 1) {
+                return {
+                    status: 'critical',
+                    description: '危急失守',
+                    color: '#f44336',
+                    priority: regionData.owner !== 1?0:5,
+                    isEnemyControlled: regionData.owner !== 1
+                };
+            } else if (controlPercent < 20 && changeRate < 0 && owner === 1) {
+                return {
+                    status: 'under-fierce-attack',
+                    description: '激战中',
+                    color: '#ff9800',
+                    priority: regionData.owner !== 1?0:4,
+                    isEnemyControlled: regionData.owner !== 1
+                };
+            } else if (changeRate > 0) {
+                return {
+                    status: 'gaining',
+                    description: '收复中',
+                    color: '#2196f3',
+                    priority: regionData.owner !== 1?0:2,
+                    isEnemyControlled: regionData.owner !== 1
+                };
+            } else if (changeRate < 0) {
+                return {
+                    status: 'losing',
+                    description: '失守中',
+                    color: '#f3e721',
+                    priority: regionData.owner !== 1?0:3,
+                    isEnemyControlled: regionData.owner !== 1
+                };
+            } else if (changeRate === 0 && (controlPercent == 100 || controlPercent == -100)) {
+                return {
+                    status: 'stable',
+                    description: '未交战',
+                    color: '#4CAF50',
+                    priority: regionData.owner !== 1?0:1,
+                    isEnemyControlled: regionData.owner !== 1
+                };
+            } else {
+                return {
+                    status: 'contested',
+                    description: '交战中',
+                    color: '#f3e721',
+                    priority: regionData.owner !== 1?0:2,
+                    isEnemyControlled: regionData.owner !== 1
+                };
+            }
+        }
+        
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'planets' && !currentPlanetData) {
+                loadPlanetsData();
+            } else if (tabName === 'orders' && ordersData.length === 0) {
+                updateOrdersData();
+            } else if (tabName === 'news' && newsData.length === 0) {
+                loadNewsData(true);
+            }
+        }
+        
+        function getFactionName(owner) {
+            const factions = {
+                1: '超级地球',
+                2: '虫族',
+                3: '机械族', 
+                4: '光明族'
+            };
+            return factions[owner] || '未知';
+        }
+        
+        function getFactionClass(owner) {
+            const factionClasses = {
+                1: 'super-earth',
+                2: 'terminids',
+                3: 'automatons',
+                4: 'illuminate'
+            };
+            return factionClasses[owner] || '';
+        }
+
+        // 图表配置
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 300
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#ffffff',
+                        font: {
+                            size: 12
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 10 },
+                        maxTicksLimit: 10
+                    },
+                    grid: { color: '#444' }
+                },
+                y: {
+                    ticks: { 
+                        color: '#ffffff',
+                        font: { size: 10 }
+                    },
+                    grid: { color: '#444' }
+                }
+            },
+            elements: {
+                point: {
+                    radius: 2
+                }
+            }
+        };
+
+        // 初始化所有图表
+        function initializeCharts() {
+            // 战争状态图表
+            const warStatusCtx = document.getElementById('warStatusChart').getContext('2d');
+            allChartsData.warStatusChart = new Chart(warStatusCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '超级地球星球数',
+                            data: [],
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: '敌方星球数',
+                            data: [],
+                            borderColor: '#F44336',
+                            backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: '在线玩家数',
+                            data: [],
+                            borderColor: '#2196F3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            tension: 0.1,
+                            fill: false,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#ffffff', font: { size: 10 } },
+                            grid: { drawOnChartArea: false, color: '#444' }
+                        }
+                    }
+                }
+            });
+
+            // 击杀统计图表
+            const killStatsCtx = document.getElementById('killStatsChart').getContext('2d');
+            allChartsData.killStatsChart = new Chart(killStatsCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '虫族击杀(B)',
+                            data: [],
+                            borderColor: '#8BC34A',
+                            backgroundColor: 'rgba(139, 195, 74, 0.1)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: '机械族击杀(B)',
+                            data: [],
+                            borderColor: '#FF9800',
+                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: '光明族击杀(B)',
+                            data: [],
+                            borderColor: '#9C27B0',
+                            backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: chartOptions
+            });
+
+            // 任务成功率图表
+            const missionSuccessCtx = document.getElementById('missionSuccessChart').getContext('2d');
+            allChartsData.missionSuccessChart = new Chart(missionSuccessCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '任务成功率(%)',
+                        data: [],
+                        borderColor: '#ffdd44',
+                        backgroundColor: 'rgba(255, 221, 68, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: chartOptions
+            });
+
+            // 订单概览图表
+            const majorOrdersCtx = document.getElementById('majorOrdersOverviewChart').getContext('2d');
+            allChartsData.majorOrdersOverviewChart = new Chart(majorOrdersCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '订单进度(%)',
+                        data: [],
+                        backgroundColor: '#ffdd44',
+                        borderColor: '#ffaa00',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+
+            // 资源图表
+            const resourcesCtx = document.getElementById('resourcesChart').getContext('2d');
+            allChartsData.resourcesChart = new Chart(resourcesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['已收集', '剩余'],
+                    datasets: [{
+                        data: [0, 100],
+                        backgroundColor: ['#00BCD4', '#444'],
+                        borderColor: ['#00BCD4', '#444'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 玩家活跃度分析图表
+            const playerActivityCtx = document.getElementById('playerActivityChart').getContext('2d');
+            allChartsData.playerActivityChart = new Chart(playerActivityCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '活跃玩家比例(%)',
+                        data: [],
+                        borderColor: '#FF5722',
+                        backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: chartOptions
+            });
+
+            // 战争影响因子图表
+            const impactMultiplierCtx = document.getElementById('impactMultiplierChart').getContext('2d');
+            allChartsData.impactMultiplierChart = new Chart(impactMultiplierCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '战争影响因子',
+                        data: [],
+                        borderColor: '#9C27B0',
+                        backgroundColor: 'rgba(156, 39, 176, 0.1)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: chartOptions
+            });
+
+            // 玩家分布图表
+            const playerDistributionCtx = document.getElementById('playerDistributionChart').getContext('2d');
+            allChartsData.playerDistributionChart = new Chart(playerDistributionCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '玩家数量',
+                        data: [],
+                        backgroundColor: '#2196F3',
+                        borderColor: '#1976D2',
+                        borderWidth: 1
+                    }]
+                },
+                options: chartOptions
+            });
+
+            // 星球生命值趋势图表
+            const planetHealthTrendCtx = document.getElementById('planetHealthTrendChart').getContext('2d');
+            allChartsData.planetHealthTrendChart = new Chart(planetHealthTrendCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: []
+                },
+                options: chartOptions
+            });
+
+            // 战争强度分析图表
+            const warIntensityCtx = document.getElementById('warIntensityChart').getContext('2d');
+            allChartsData.warIntensityChart = new Chart(warIntensityCtx, {
+                type: 'radar',
+                data: {
+                    labels: ['总玩家数', '活跃星球', '激战地区', '任务成功率', '击杀效率', '资源收集'],
+                    datasets: [{
+                        label: '战争强度',
+                        data: [],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.2)',
+                        pointBackgroundColor: '#ff6b6b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: { color: '#444' },
+                            grid: { color: '#444' },
+                            pointLabels: { color: '#ffffff', font: { size: 10 } },
+                            ticks: { color: '#ffffff', backdropColor: 'transparent' }
+                        }
+                    }
+                }
+            });
+
+            // 阵营控制变化图表
+            const factionControlCtx = document.getElementById('factionControlChart').getContext('2d');
+            allChartsData.factionControlChart = new Chart(factionControlCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: '超级地球控制率',
+                            data: [],
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: '虫族控制率',
+                            data: [],
+                            borderColor: '#8BC34A',
+                            backgroundColor: 'rgba(139, 195, 74, 0.1)',
+                            tension: 0.1,
+                            fill: false
+                        },
+                        {
+                            label: '机械族控制率',
+                            data: [],
+                            borderColor: '#FF9800',
+                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                            tension: 0.1,
+                            fill: false
+                        }
+                    ]
+                },
+                options: chartOptions
+            });
+
+            // 资源收集效率图表
+            const resourceEfficiencyCtx = document.getElementById('resourceEfficiencyChart').getContext('2d');
+            allChartsData.resourceEfficiencyChart = new Chart(resourceEfficiencyCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '收集效率(每小时)',
+                        data: [],
+                        backgroundColor: '#00BCD4',
+                        borderColor: '#00ACC1',
+                        borderWidth: 1
+                    }]
+                },
+                options: chartOptions
+            });
+
+            // 任务类型分析图表
+            const missionTypeCtx = document.getElementById('missionTypeChart').getContext('2d');
+            allChartsData.missionTypeChart = new Chart(missionTypeCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['解放任务', '防御任务', '特殊行动', '其他'],
+                    datasets: [{
+                        data: [40, 30, 20, 10],
+                        backgroundColor: ['#4CAF50', '#FF9800', '#9C27B0', '#607D8B'],
+                        borderColor: ['#4CAF50', '#FF9800', '#9C27B0', '#607D8B'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 地区生命值图表
+            const regionHealthCtx = document.getElementById('regionHealthChart').getContext('2d');
+            allChartsData.regionHealthChart = new Chart(regionHealthCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '生命值',
+                        data: [],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        tension: 0.1,
+                        fill: true,
+                        yAxisID: 'y'
+                    }, {
+                        label: '玩家数量',
+                        data: [],
+                        borderColor: '#4ecdc4',
+                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                        tension: 0.1,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            title: {
+                                display: true,
+                                text: '生命值',
+                                color: '#ff6b6b'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#ffffff', font: { size: 10 } },
+                            grid: { drawOnChartArea: false, color: '#444' },
+                            title: {
+                                display: true,
+                                text: '玩家数量',
+                                color: '#4ecdc4'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 地区真实占领度变化图表
+            const regionControlCtx = document.getElementById('regionControlChart').getContext('2d');
+            allChartsData.regionControlChart = new Chart(regionControlCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '占领度(%)',
+                        data: [],
+                        borderColor: '#4ecdc4',
+                        backgroundColor: 'rgba(78, 205, 196, 0.1)',
+                        tension: 0.1,
+                        fill: true,
+                        yAxisID: 'y'
+                    }, {
+                        label: '真实变化率(%/h)',
+                        data: [],
+                        borderColor: '#ffdd44',
+                        backgroundColor: 'rgba(255, 221, 68, 0.1)',
+                        tension: 0.1,
+                        fill: false,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    scales: {
+                        ...chartOptions.scales,
+                        y: {
+                            ...chartOptions.scales.y,
+                            min: -100,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '占领度(%)',
+                                color: '#4ecdc4'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#ffffff', font: { size: 10 } },
+                            grid: { drawOnChartArea: false, color: '#444' },
+                            title: {
+                                display: true,
+                                text: '变化率(%/h)',
+                                color: '#ffdd44'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 数据获取和更新函数
+        async function fetchAndUpdateData() {
+            const timeRange = document.getElementById('overviewTimeRange')?.value || 24;
+            
+            try {
+                // 获取战争状态数据
+                const warStatusResponse = await fetch(`/api/war-status-trend?hours=${timeRange}&limit=1000`);
+                const warStatusData = await warStatusResponse.json();
+                
+                if (warStatusData.length > 0) {
+                    const labels = warStatusData.map(d => formatTimestamp(d.timestamp));
+                    
+                    // 更新战争状态图表
+                    allChartsData.warStatusChart.data.labels = labels;
+                    allChartsData.warStatusChart.data.datasets[0].data = warStatusData.map(d => d.super_earth_planets);
+                    allChartsData.warStatusChart.data.datasets[1].data = warStatusData.map(d => d.enemy_planets);
+                    allChartsData.warStatusChart.data.datasets[2].data = warStatusData.map(d => d.total_players);
+                    allChartsData.warStatusChart.update('none');
+                    
+                    // 更新玩家活跃度图表
+                    const totalPlanets = warStatusData.map(d => d.super_earth_planets + d.enemy_planets);
+                    const activePlanetsRatio = warStatusData.map((d, i) => {
+                        const total = totalPlanets[i];
+                        return total > 0 ? (d.super_earth_planets / total * 100) : 0;
+                    });
+                    allChartsData.playerActivityChart.data.labels = labels;
+                    allChartsData.playerActivityChart.data.datasets[0].data = activePlanetsRatio;
+                    allChartsData.playerActivityChart.update('none');
+                    
+                    // 更新战争影响因子图表
+                    allChartsData.impactMultiplierChart.data.labels = labels;
+                    allChartsData.impactMultiplierChart.data.datasets[0].data = warStatusData.map(d => d.impact_multiplier || 1);
+                    allChartsData.impactMultiplierChart.update('none');
+                    
+                    // 更新阵营控制变化图表
+                    allChartsData.factionControlChart.data.labels = labels;
+                    allChartsData.factionControlChart.data.datasets[0].data = warStatusData.map(d => {
+                        const total = d.super_earth_planets + d.enemy_planets;
+                        return total > 0 ? (d.super_earth_planets / total * 100) : 0;
+                    });
+                    allChartsData.factionControlChart.data.datasets[1].data = warStatusData.map(d => {
+                        const total = d.super_earth_planets + d.enemy_planets;
+                        return total > 0 ? (d.enemy_planets * 0.4 / total * 100) : 0; // 假设40%为虫族
+                    });
+                    allChartsData.factionControlChart.data.datasets[2].data = warStatusData.map(d => {
+                        const total = d.super_earth_planets + d.enemy_planets;
+                        return total > 0 ? (d.enemy_planets * 0.6 / total * 100) : 0; // 假设60%为机械族
+                    });
+                    allChartsData.factionControlChart.update('none');
+                }
+
+                // 获取主要订单数据
+                const majorOrdersResponse = await fetch('/api/major-orders-progress?limit=10');
+                const majorOrdersData = await majorOrdersResponse.json();
+                
+                if (majorOrdersData.length > 0) {
+                    allChartsData.majorOrdersOverviewChart.data.labels = majorOrdersData.map(d => 
+                        d.title && d.title.length > 15 ? d.title.substring(0, 15) + '...' : (d.title || '未知订单')
+                    );
+                    allChartsData.majorOrdersOverviewChart.data.datasets[0].data = majorOrdersData.map(d => d.progress_percentage || 0);
+                    allChartsData.majorOrdersOverviewChart.update('none');
+                }
+
+                // 获取战争统计数据
+                const warStatsResponse = await fetch(`/api/war-stats-trend?hours=${timeRange}&limit=1000`);
+                const warStatsData = await warStatsResponse.json();
+                
+                if (warStatsData.length > 0) {
+                    const labels = warStatsData.map(d => formatTimestamp(d.timestamp));
+                    
+                    // 更新击杀统计
+                    allChartsData.killStatsChart.data.labels = labels;
+                    allChartsData.killStatsChart.data.datasets[0].data = warStatsData.map(d => d.bug_kills / 1e9);
+                    allChartsData.killStatsChart.data.datasets[1].data = warStatsData.map(d => d.automaton_kills / 1e9);
+                    allChartsData.killStatsChart.data.datasets[2].data = warStatsData.map(d => d.illuminate_kills / 1e9);
+                    allChartsData.killStatsChart.update('none');
+                    
+                    // 更新任务成功率
+                    allChartsData.missionSuccessChart.data.labels = labels;
+                    allChartsData.missionSuccessChart.data.datasets[0].data = warStatsData.map(d => d.mission_success_rate);
+                    allChartsData.missionSuccessChart.update('none');
+
+                    // 更新统计卡片（增加更多API参数）
+                    updateEnhancedStatsCards(warStatsData[warStatsData.length - 1], warStatusData[warStatusData.length - 1]);
+                    
+                    // 更新战争强度雷达图
+                    const latestStats = warStatsData[warStatsData.length - 1];
+                    const latestWarStatus = warStatusData[warStatusData.length - 1];
+                    const intensityData = [
+                        Math.min(latestWarStatus.total_players / 100000 * 100, 100), // 总玩家数标准化
+                        Math.min(latestWarStatus.super_earth_planets / 50 * 100, 100), // 活跃星球标准化
+                        Math.min(latestWarStatus.enemy_planets / 30 * 100, 100), // 激战地区标准化
+                        latestStats.mission_success_rate, // 任务成功率
+                        Math.min((latestStats.bug_kills + latestStats.automaton_kills + latestStats.illuminate_kills) / 1e12 * 100, 100), // 击杀效率标准化
+                        Math.min(latestStats.accuracy, 100) // 射击准确率
+                    ];
+                    allChartsData.warIntensityChart.data.datasets[0].data = intensityData;
+                    allChartsData.warIntensityChart.update('none');
+                }
+
+                // 获取资源数据
+                const resourcesResponse = await fetch(`/api/global-resources-trend?hours=${timeRange}&limit=1000`);
+                const resourcesData = await resourcesResponse.json();
+                
+                if (resourcesData.length > 0) {
+                    const latestResource = resourcesData[resourcesData.length - 1];
+                    const percentage = latestResource.percentage;
+                    allChartsData.resourcesChart.data.datasets[0].data = [percentage, 100 - percentage];
+                    allChartsData.resourcesChart.update('none');
+                    
+                    // 更新资源收集效率图表
+                    const resourceLabels = resourcesData.map(d => formatTimestamp(d.timestamp));
+                    const efficiencyData = [];
+                    for (let i = 1; i < resourcesData.length; i++) {
+                        const current = resourcesData[i];
+                        const previous = resourcesData[i - 1];
+                        const timeDiff = (current.timestamp - previous.timestamp) / 3600; // 小时
+                        const valueDiff = current.current_value - previous.current_value;
+                        const efficiency = timeDiff > 0 ? valueDiff / timeDiff : 0;
+                        efficiencyData.push(Math.max(0, efficiency));
+                    }
+                    
+                    allChartsData.resourceEfficiencyChart.data.labels = resourceLabels.slice(1);
+                    allChartsData.resourceEfficiencyChart.data.datasets[0].data = efficiencyData;
+                    allChartsData.resourceEfficiencyChart.update('none');
+                }
+
+            } catch (error) {
+                console.error('获取数据时出错:', error);
+                document.querySelector('.stats-grid').innerHTML = 
+                    '<div class="error">数据加载失败，请检查网络连接</div>';
+            }
+        }
+
+        function updateOverviewData() {
+            fetchAndUpdateData();
+        }
+
+        function updateStatsData() {
+            const timeRange = document.getElementById('statsTimeRange').value;
+            updatePlayerDistribution(timeRange);
+            updatePlanetHealthTrend(timeRange);
+        }
+
+        async function updatePlayerDistribution(timeRange = 24) {
+            try {
+                const response = await fetch(`/api/planets-by-sector`);
+                const data = await response.json();
+                
+                if (data.sectors) {
+                    const planetsWithPlayers = [];
+                    Object.values(data.sectors).forEach(planets => {
+                        planets.forEach(planet => {
+                            if (planet.players > 0) {
+                                planetsWithPlayers.push(planet);
+                            }
+                        });
+                    });
+                    
+                    planetsWithPlayers.sort((a, b) => b.players - a.players);
+                    const top20 = planetsWithPlayers.slice(0, 20);
+                    
+                    allChartsData.playerDistributionChart.data.labels = top20.map(p => `星球 #${p.index}`);
+                    allChartsData.playerDistributionChart.data.datasets[0].data = top20.map(p => p.players);
+                    allChartsData.playerDistributionChart.update('none');
+                }
+            } catch (error) {
+                console.error('更新玩家分布失败:', error);
+            }
+        }
+
+        async function updatePlanetHealthTrend(timeRange = 24) {
+            try {
+                const planetsResponse = await fetch('/api/planets-by-sector');
+                const planetsData = await planetsResponse.json();
+                
+                if (!planetsData.sectors) return;
+                
+                const activePlanets = [];
+                Object.values(planetsData.sectors).forEach(planets => {
+                    planets.forEach(planet => {
+                        if (planet.players > 0) {
+                            activePlanets.push(planet);
+                        }
+                    });
+                });
+                
+                activePlanets.sort((a, b) => b.players - a.players);
+                const top5Planets = activePlanets.slice(0, 5);
+                
+                const datasets = [];
+                const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
+                
+                for (let i = 0; i < top5Planets.length; i++) {
+                    const planet = top5Planets[i];
+                    const healthResponse = await fetch(`/api/planet-health-history/${planet.index}?hours=${timeRange}&limit=30`);
+                    const healthData = await healthResponse.json();
+                    
+                    const res = await fetch(`/api/planet-details/${planet.index}`);
+                    const ownerData = await res.json();
+                    const planetOwner = ownerData.planet.owner;
+                    
+                    if (healthData.length > 0) {
+                        datasets.push({
+                            label: `星球 #${planet.index}`,
+                            data: healthData.map(d => (planetOwner===1?d.health:-d.health / planet.max_health * 100).toFixed(1)),
+                            borderColor: colors[i],
+                            backgroundColor: colors[i] + '20',
+                            tension: 0.1,
+                            fill: false
+                        });
+                        
+                        if (i === 0) {
+                            allChartsData.planetHealthTrendChart.data.labels = healthData.map(d => formatTimestamp(d.timestamp));
+                        }
+                    }
+                }
+                
+                allChartsData.planetHealthTrendChart.data.datasets = datasets;
+                allChartsData.planetHealthTrendChart.update('none');
+                
+            } catch (error) {
+                console.error('更新星球生命值趋势失败:', error);
+            }
+        }
+
+        function updateEnhancedStatsCards(latestStats, latestWarStatus) {
+            const statsGrid = document.getElementById('statsGrid');
+            
+            // 计算额外的统计数据
+            const totalKills = latestStats.bug_kills + latestStats.automaton_kills + latestStats.illuminate_kills;
+            const killDeathRatio = latestStats.total_deaths > 0 ? (totalKills / latestStats.total_deaths).toFixed(2) : '∞';
+            const planetsControlled = latestWarStatus.super_earth_planets;
+            const totalPlanets = latestWarStatus.super_earth_planets + latestWarStatus.enemy_planets;
+            const controlPercentage = totalPlanets > 0 ? (planetsControlled / totalPlanets * 100).toFixed(1) : '0';
+            
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${formatNumber(latestStats.missions_won)}</div>
+                    <div class="stat-label">任务胜利</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${latestStats.mission_success_rate.toFixed(1)}%</div>
+                    <div class="stat-label">胜率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${formatNumber(totalKills)}</div>
+                    <div class="stat-label">总击杀数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${formatNumber(latestStats.total_deaths)}</div>
+                    <div class="stat-label">总死亡数</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${killDeathRatio}</div>
+                    <div class="stat-label">击杀死亡比</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${latestStats.accuracy.toFixed(1)}%</div>
+                    <div class="stat-label">射击准确率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${controlPercentage}%</div>
+                    <div class="stat-label">星球控制率</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${formatNumber(latestWarStatus.total_players)}</div>
+                    <div class="stat-label">在线玩家</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${(latestWarStatus.impact_multiplier || 1).toFixed(4)}</div>
+                    <div class="stat-label">战争影响因子</div>
+                </div>
+            `;
+        }
+
+        // 订单相关函数（保持不变）
+        async function updateOrdersData() {
+            const timeRange = document.getElementById('ordersTimeRange')?.value || 48;
+            
+            try {
+                const summaryResponse = await fetch('/api/all-major-orders-summary');
+                const summaryData = await summaryResponse.json();
+                
+                ordersData = summaryData;
+                displayOrdersList(summaryData);
+                updateOrdersOverview(summaryData);
+                updateOrdersTimeline(summaryData);
+                
+                if (currentSelectedOrder) {
+                    displayOrderDetails(currentSelectedOrder, timeRange);
+                }
+                
+            } catch (error) {
+                console.error('获取订单数据失败:', error);
+                document.getElementById('ordersList').innerHTML = 
+                    '<div class="error">订单数据加载失败</div>';
+            }
+        }
+
+        // 新增：地区图表时间选择更新函数
+        function updateRegionChartsData() {
+            const timeRange = document.getElementById('regionTimeRange')?.value || 24;
+            
+            // 如果当前有选中的地区，重新加载该地区的图表数据
+            if (typeof currentSelectedPlanet !== 'undefined' && typeof currentSelectedRegion !== 'undefined' && currentSelectedPlanet != null && currentSelectedRegion != null) {
+                loadRegionHealthChart(currentSelectedPlanet, currentSelectedRegion, timeRange);
+            }
+            
+            // 重新加载地区历史数据
+            if (typeof currentSelectedPlanet !== 'undefined' && currentSelectedRegion != null) {
+                loadRegionHistoryData(currentSelectedPlanet);
+            }
+        }
+
+        function displayOrdersList(orders) {
+            const container = document.getElementById('ordersList');
+            
+            if (!orders || orders.length === 0) {
+                container.innerHTML = '<div class="loading">暂无活跃订单</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            orders.forEach(order => {
+                const isActive = order.is_active;
+                const statusClass = isActive ? 'order-status-active' : 'order-status-expired';
+                const statusText = isActive ? '进行中' : '已过期';
+                const timeRemaining = isActive ? `${Math.floor(order.expires_in / 3600)}小时` : '已结束';
+                
+                html += `
+                    <div class="order-item" onclick="selectOrder(${order.order_id})">
+                        <span class="${statusClass}">${statusText}</span>
+                        <div class="order-title">${order.title || '未知订单'}</div>
+                        <div class="order-progress-info">
+                            进度: ${formatNumber(order.current_progress)}/${formatNumber(order.target_value)} 
+                            (${order.progress_percentage.toFixed(1)}%)
+                        </div>
+                        <div class="health-bar">
+                            <div class="health-fill" style="width: ${order.progress_percentage}%"></div>
+                        </div>
+                        <div class="order-brief">${order.brief || '暂无描述'}</div>
+                        <div class="order-meta">
+                            <span>剩余: ${timeRemaining}</span>
+                            <span>活跃: ${order.duration_hours.toFixed(1)}小时</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function updateOrdersOverview(orders) {
+            if (!orders || orders.length === 0) return;
+            
+            const activeOrders = orders.filter(order => order.is_active);
+            
+            if (allChartsData.majorOrdersOverviewChart) {
+                allChartsData.majorOrdersOverviewChart.data.labels = activeOrders.map(order => 
+                    order.title && order.title.length > 15 ? order.title.substring(0, 15) + '...' : (order.title || '未知订单')
+                );
+                allChartsData.majorOrdersOverviewChart.data.datasets[0].data = activeOrders.map(order => 
+                    order.progress_percentage
+                );
+                allChartsData.majorOrdersOverviewChart.update('none');
+            }
+        }
+
+        function updateOrdersTimeline(orders) {
+            const timeline = document.getElementById('ordersTimeline');
+            
+            if (!orders || orders.length === 0) {
+                timeline.innerHTML = '<div class="loading">暂无订单数据</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            orders.forEach(order => {
+                const progressPercent = order.progress_percentage || 0;
+                const isActive = order.is_active;
+                const statusColor = isActive ? '#4CAF50' : '#f44336';
+                
+                html += `
+                    <div class="stat-card" style="text-align: left; margin-bottom: 15px; border-left-color: ${statusColor};">
+                        <div class="stat-label" style="font-size: 1rem; margin-bottom: 10px;">
+                            ${order.title || '未知订单'}
+                            <span style="float: right; color: ${statusColor}; font-size: 0.8rem;">
+                                ${isActive ? '进行中' : '已结束'}
+                            </span>
+                        </div>
+                        <div style="margin-bottom: 10px; font-size: 0.9rem;">${order.brief || '暂无描述'}</div>
+                        <div class="health-bar">
+                            <div class="health-fill" style="width: ${progressPercent}%"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 8px;">
+                            <span>进度: ${formatNumber(order.current_progress)}/${formatNumber(order.target_value)} (${progressPercent.toFixed(1)}%)</span>
+                            <span>${isActive ? `剩余: ${Math.floor(order.expires_in / 3600)}小时` : '已结束'}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            timeline.innerHTML = html;
+        }
+
+        function selectOrder(orderId) {
+            document.querySelectorAll('.order-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            event.target.closest('.order-item').classList.add('selected');
+            
+            currentSelectedOrder = orderId;
+            
+            const timeRange = document.getElementById('ordersTimeRange')?.value || 48;
+            displayOrderDetails(orderId, timeRange);
+        }
+
+        async function displayOrderDetails(orderId, timeRange = 48) {
+            try {
+                const response = await fetch(`/api/major-order-progress-history/${orderId}?hours=${timeRange}&limit=100`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    document.getElementById('orderDetails').innerHTML = 
+                        '<div class="error">订单详情加载失败</div>';
+                    return;
+                }
+                
+                const orderInfo = data.order_info;
+                const progressHistory = data.progress_history;
+                
+                const container = document.getElementById('orderDetails');
+                
+                const currentProgress = progressHistory.length > 0 ? progressHistory[progressHistory.length - 1] : null;
+                const startProgress = progressHistory.length > 0 ? progressHistory[0] : null;
+                const progressGain = currentProgress && startProgress ? 
+                    currentProgress.current_progress - startProgress.current_progress : 0;
+                const timeSpan = currentProgress && startProgress ? 
+                    (currentProgress.timestamp - startProgress.timestamp) / 3600 : 0;
+                const avgProgressPerHour = timeSpan > 0 ? progressGain / timeSpan : 0;
+                
+                let html = `
+                    <h3>${orderInfo.title || '未知订单'}</h3>
+                    <div class="order-stats">
+                        <div class="order-stat">
+                            <div class="stat-value">${currentProgress ? formatNumber(currentProgress.current_progress) : '未知'}</div>
+                            <div class="stat-label">当前进度</div>
+                        </div>
+                        <div class="order-stat">
+                            <div class="stat-value">${formatNumber(orderInfo.target_value)}</div>
+                            <div class="stat-label">目标值</div>
+                        </div>
+                        <div class="order-stat">
+                            <div class="stat-value">${currentProgress ? currentProgress.progress_percentage.toFixed(1) : '0'}%</div>
+                            <div class="stat-label">完成百分比</div>
+                        </div>
+                        <div class="order-stat">
+                            <div class="stat-value">${formatNumber(progressGain)}</div>
+                            <div class="stat-label">${timeRange}h内增长</div>
+                        </div>
+                        <div class="order-stat">
+                            <div class="stat-value">${avgProgressPerHour > 0 ? formatNumber(avgProgressPerHour) : '0'}</div>
+                            <div class="stat-label">平均每小时</div>
+                        </div>
+                        <div class="order-stat">
+                            <div class="stat-value">${currentProgress ? Math.floor(currentProgress.expires_in / 3600) : '0'}</div>
+                            <div class="stat-label">剩余小时</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; padding: 15px; background-color: #3a3a3a; border-radius: 8px;">
+                        <strong>订单描述:</strong><br>
+                        ${orderInfo.brief || '暂无描述'}
+                    </div>
+                `;
+                
+                if (progressHistory.length > 0) {
+                    html += `
+                        <div class="progress-chart-container">
+                            <div class="progress-chart-title">进度变化曲线 (${timeRange}小时)</div>
+                            <div class="progress-chart-wrapper">
+                                <canvas id="orderProgressChart"></canvas>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+                
+                if (progressHistory.length > 0) {
+                    createOrderProgressChart(progressHistory, orderInfo);
+                }
+                
+            } catch (error) {
+                console.error('获取订单详情失败:', error);
+                document.getElementById('orderDetails').innerHTML = 
+                    '<div class="error">订单详情加载失败</div>';
+            }
+        }
+
+        function createOrderProgressChart(progressHistory, orderInfo) {
+            const ctx = document.getElementById('orderProgressChart').getContext('2d');
+            
+            if (allChartsData.orderProgressChart) {
+                allChartsData.orderProgressChart.destroy();
+            }
+            
+            const labels = progressHistory.map(d => formatTimestamp(d.timestamp));
+            const progressData = progressHistory.map(d => d.current_progress);
+            const percentageData = progressHistory.map(d => d.progress_percentage);
+            
+            allChartsData.orderProgressChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '绝对进度',
+                            data: progressData,
+                            borderColor: '#ffdd44',
+                            backgroundColor: 'rgba(255, 221, 68, 0.1)',
+                            tension: 0.1,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: '完成百分比',
+                            data: percentageData,
+                            borderColor: '#4CAF50',
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            tension: 0.1,
+                            fill: false,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 300
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#ffffff',
+                                font: { size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    if (context.datasetIndex === 0) {
+                                        const percentage = percentageData[context.dataIndex];
+                                        return `完成度: ${percentage.toFixed(1)}%`;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { 
+                                color: '#ffffff',
+                                font: { size: 10 },
+                                maxTicksLimit: 10
+                            },
+                            grid: { color: '#444' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: { 
+                                color: '#ffffff',
+                                font: { size: 10 },
+                                callback: function(value) {
+                                    return formatNumber(value);
+                                }
+                            },
+                            grid: { color: '#444' },
+                            title: {
+                                display: true,
+                                text: '绝对进度',
+                                color: '#ffdd44'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            min: 0,
+                            max: 100,
+                            ticks: { 
+                                color: '#ffffff',
+                                font: { size: 10 },
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: { drawOnChartArea: false, color: '#444' },
+                            title: {
+                                display: true,
+                                text: '完成百分比',
+                                color: '#4CAF50'
+                            }
+                        }
+                    },
+                    elements: {
+                        point: {
+                            radius: 3,
+                            hoverRadius: 5
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 星球相关函数（改进版，使用真实计算）
+        async function loadPlanetsData() {
+            try {
+                const response = await fetch('/api/planets-by-sector');
+                const data = await response.json();
+                currentPlanetData = data;
+                
+                // 加载历史数据用于计算真实变化率
+                await loadPlanetHistoryData();
+                
+                displayPlanetsList(data);
+            } catch (error) {
+                console.error('获取星球数据失败:', error);
+                document.getElementById('planetsListing').innerHTML = 
+                    '<div class="error">星球数据加载失败</div>';
+            }
+        }
+
+        async function loadPlanetHistoryData() {
+            try {
+                const promises = [];
+                
+                // 获取星球历史数据
+                if (currentPlanetData && currentPlanetData.sectors) {
+                    Object.values(currentPlanetData.sectors).forEach(planets => {
+                        planets.forEach(planet => {
+                            promises.push(fetchPlanetDataWithRetry(planet.index));
+                        });
+                    });
+                }
+                
+                // 使用 allSettled 确保所有请求都完成（无论成功或失败）
+                const results = await Promise.allSettled(promises);
+                
+                // 检查结果
+                const failedPlanets = [];
+                results.forEach((result, index) => {
+                    if (result.status === 'rejected') {
+                        failedPlanets.push(index);
+                    }
+                });
+                
+                if (failedPlanets.length > 0) {
+                    console.log(`${failedPlanets.length} 个星球数据获取失败，可以选择重新尝试`);
+                }
+                
+            } catch (error) {
+                console.error('获取历史数据失败:', error);
+            }
+        }
+        
+        async function fetchPlanetDataWithRetry(planetIndex, maxRetries = 3) {
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const response = await fetch(`/api/planet-health-history/${planetIndex}?hours=6&limit=10`);
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    planetHistoryData[planetIndex] = data;
+                    return data;
+                    
+                } catch (error) {
+                    if (attempt === maxRetries) {
+                        throw new Error(`星球 ${planetIndex} 在${maxRetries}次尝试后仍然失败: ${error.message}`);
+                    }
+                    
+                    // 指数退避延迟
+                    const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
+            }
+        }
+
+        async function displayPlanetsList(data) {
+            const container = document.getElementById('planetsListing');
+            
+            if (!data.sectors) {
+                container.innerHTML = '<div class="error">星球数据格式错误</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            const sortedSectors = Object.keys(data.sectors).sort((a, b) => parseInt(a) - parseInt(b));
+            
+            sortedSectors.forEach(sectorId => {
+                //if (sectorId > 0) return;
+                const planets = data.sectors[sectorId];
+                if (planets.length > 0) {
+                    const planetsByOwner = {
+                        1: [],
+                        2: [],
+                        3: [],
+                        4: []
+                    };
+                    
+                    planets.forEach(planet => {
+                        planetsByOwner[planet.owner].push(planet);
+                    });
+                    
+                    html += `
+                        <div class="sector-group">
+                            <div class="sector-header">
+                                Sector ${sectorId} (${planets.length}个星球)
+                            </div>
+                    `;
+                    
+                    Object.keys(planetsByOwner).forEach(owner => {
+                        const ownerPlanets = planetsByOwner[owner];
+                        if (ownerPlanets.length > 0) {
+                            ownerPlanets.forEach(planet => {
+                                const healthPercent = (planet.health / planet.max_health * 100).toFixed(1);
+                                
+                                // 计算真实占领度变化
+                                const controlChange = calculateRealControlChange(planet.health, planet.max_health, planet.index, planet.owner);
+                                const battleStatus = analyzeRealBattleStatus(planet, controlChange, planet.owner);
+                                
+                                let statusIndicator = 'stable';
+                                let trendClass = 'trend-neutral';
+                                let trendText = '未交战';
+                                
+                                if (planet.owner !== 1 && planet.health == planet.max_health) {
+                                    statusIndicator = 'enemy-controlled';
+                                    trendClass = 'trend-enemy';
+                                    trendText = '敌方控制';
+                                } else if (battleStatus.status === 'critical') {
+                                    statusIndicator = 'critical';
+                                    trendClass = 'trend-negative';
+                                    trendText = '危急失守';
+                                } else if (battleStatus.status === 'under-fierce-attack') {
+                                    statusIndicator = 'under-fierce-attack';
+                                    trendClass = 'trend-negative';
+                                    trendText = '激战中';
+                                } else if (battleStatus.status === 'gaining') {
+                                    statusIndicator = 'gaining';
+                                    trendClass = 'trend-positive';
+                                    trendText = '收复中';
+                                } else if (battleStatus.status === 'losing') {
+                                    statusIndicator = 'losing';
+                                    trendClass = 'trend-negative';
+                                    trendText = '失守中';
+                                }
+                                
+                                const criticalClass = battleStatus.status === 'critical' && planet.owner === 1 ? 'critical' : '';
+                                
+                                html += `
+                                    <div class="planet-item owner-${planet.owner} ${criticalClass}" onclick="selectPlanet(${planet.index})">
+                                        <div class="planet-status-indicator ${statusIndicator}"></div>
+                                        <div class="planet-name">
+                                            <span>星球 #${planet.index}</span>
+                                            <span class="planet-owner-indicator owner-${planet.owner}"></span>
+                                        </div>
+                                        <div class="planet-info">
+                                            ${getFactionName(planet.owner)} | 控制度: ${controlChange.currentControl.toFixed(1)}% | 玩家: ${planet.players}
+                                        </div>
+                                        <div class="planet-trend ${trendClass}">
+                                            ${battleStatus.description} | ${trendText}
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+                    });
+                    
+                    html += '</div>';
+                }
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function selectPlanet(planetIndex) {
+            document.querySelectorAll('.planet-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            event.target.closest('.planet-item').classList.add('selected');
+            
+            currentSelectedPlanet = planetIndex;
+            
+            displayPlanetDetails(planetIndex);
+        }
+
+        async function displayPlanetDetails(planetIndex) {
+            try {
+                const response = await fetch(`/api/planet-details/${planetIndex}`);
+                const planetData = await response.json();
+                
+                const container = document.getElementById('planetDetails');
+                
+                // 计算真实的星球控制数据
+                const controlChange = calculateRealControlChange(planetData.planet.health, planetData.planet.max_health, planetIndex, planetData.planet.owner);
+                const battleStatus = analyzeRealBattleStatus(planetData.planet, controlChange, planetData.planet.owner);
+                
+                // 计算地区统计数据
+                const regionStats = calculateRealRegionStats(planetData.regions, planetIndex);
+                
+                let html = `
+                    <h3>星球 #${planetIndex} 详情 (Sector ${planetData.planet.sector})</h3>
+                    
+                    <!-- API 信息面板 -->
+                    <div class="api-info">
+                        <h4>API 提供的原始数据</h4>
+                        <div class="api-grid">
+                            <div class="api-item">
+                                <span class="api-label">当前生命值:</span> ${formatNumber(planetData.planet.health)}
+                            </div>
+                            <div class="api-item">
+                                <span class="api-label">最大生命值:</span> ${formatNumber(planetData.planet.max_health)}
+                            </div>
+                            <div class="api-item">
+                                <span class="api-label">位置坐标:</span> (${planetData.planet.position.x.toFixed(2)}, ${planetData.planet.position.y.toFixed(2)})
+                            </div>
+                            <div class="api-item">
+                                <span class="api-label">在线玩家:</span> ${planetData.planet.players}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 真实战况分析 -->
+                    <div class="battle-summary">
+                        <h4>真实战况分析</h4>
+                        <div class="battle-indicators">
+                            <div class="battle-indicator ${battleStatus.isEnemyControlled ? 'enemy' : battleStatus.status === 'critical' ? 'critical' : 'stable'}">
+                                <div class="stat-value" style="color: ${battleStatus.color};">${battleStatus.description}</div>
+                                <div class="stat-label">当前状态</div>
+                            </div>
+                            <!--
+                            <div class="battle-indicator">
+                                <div class="stat-value">${controlChange.currentControl.toFixed(1)}%</div>
+                                <div class="stat-label">真实控制度</div>
+                            </div>
+                            <div class="battle-indicator">
+                                <div class="stat-value ${controlChange.changeRate > 0 ? 'positive' : controlChange.changeRate < 0 ? 'negative' : 'neutral'}">${controlChange.changeRate.toFixed(2)}%/h</div>
+                                <div class="stat-label">控制度变化率</div>
+                            </div>
+                             -->
+                            <div class="battle-indicator">
+                                <div class="stat-value">${regionStats.contestedRegions}</div>
+                                <div class="stat-label">激战地区</div>
+                            </div>
+                            <div class="battle-indicator">
+                                <div class="stat-value">${regionStats.enemyControlledRegions}</div>
+                                <div class="stat-label">敌控地区</div>
+                            </div>
+                            <div class="battle-indicator">
+                                <div class="stat-value">${regionStats.criticalRegions}</div>
+                                <div class="stat-label">危急地区</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="planet-stats">
+                        <div class="planet-stat ${battleStatus.isEnemyControlled ? 'enemy' : ''}">
+                            <div class="stat-value">${getFactionName(planetData.planet.owner)}</div>
+                            <div class="stat-label">控制方</div>
+                        </div>
+                        <div class="planet-stat region-card ${controlChange.currentControl < 30 && controlChange.currentControl >= 0 ? 'critical' : controlChange.currentControl > 70 ? 'positive' : ''}" onclick="currentSelectedRegion=-1;loadRegionHealthChart(${planetIndex}, -1);document.getElementById('regionCharts').classList.add('active');">
+                            <div class="stat-value">${controlChange.currentControl.toFixed(1)}%</div>
+                            <div class="stat-label">真实控制度</div>
+                        </div>
+                        <div class="planet-stat">
+                            <div class="stat-value">${planetData.planet.players}</div>
+                            <div class="stat-label">当前玩家</div>
+                        </div>
+                        <div class="planet-stat region-card ${controlChange.changeRate < 0 ? 'critical' : 'positive'}" onclick="currentSelectedRegion=-1;loadRegionHealthChart(${planetIndex}, -1);document.getElementById('regionCharts').classList.add('active');">
+                            <div class="stat-value">${controlChange.changeRate.toFixed(2)}%/h</div>
+                            <div class="stat-label">变化率</div>
+                        </div>
+                        <div class="planet-stat">
+                            <div class="stat-value">${regionStats.activeRegions}</div>
+                            <div class="stat-label">活跃地区</div>
+                        </div>
+                        <div class="planet-stat">
+                            <div class="stat-value">${controlChange.changeRate > 0 ? (((planetData.planet.owner===1?100:0) - controlChange.currentControl) / controlChange.changeRate).toFixed(2) : controlChange.changeRate < 0 ?(((planetData.planet.owner===1?0:-100) - controlChange.currentControl) / controlChange.changeRate).toFixed(2) : '-'}h</div>
+                            <div class="stat-label">完全沦陷/占领</div>
+                        </div>
+                    </div>
+                    
+                    <h4 style="color: #ffdd44; margin-bottom: 15px;">地区详情 (点击查看真实数据分析)</h4>
+                    <div class="regions-grid">
+                `;
+                
+                planetData.regions.forEach(region => {
+                    // 计算地区真实数据
+                    const regionControlChange = calculateRealControlChange(region.health, region.maxHealth, planetIndex, region.owner, region.regionIndex);
+                    const regionBattleStatus = analyzeRealBattleStatus(region, regionControlChange, region.owner);
+                    
+                    const ownerClass = `owner-${region.owner}`;
+                    // 修改地区卡片HTML生成部分的statusClass判断
+                    const statusClass = regionBattleStatus.isEnemyControlled ? 'enemy-controlled' : 
+                                       regionBattleStatus.status === 'critical' ? 'critical' :
+                                       regionBattleStatus.status === 'under-fierce-attack' ? 'under-fierce-attack' :
+                                       regionBattleStatus.status === 'losing' ? 'losing' : 
+                                       regionBattleStatus.status === 'gaining' ? 'gaining' :
+                                       regionBattleStatus.status === 'stable' ? 'stable' : 
+                                       regionBattleStatus.status === 'contested' ? 'contested' : '';
+                    
+                    html += `
+                        <div class="region-card ${ownerClass} ${statusClass}" onclick="selectRegion(${planetIndex}, ${region.regionIndex})">
+                            <div class="region-header">
+                                <span>地区 #${region.regionIndex}</span>
+                                <span class="region-status ${statusClass}">${regionBattleStatus.description}</span>
+                            </div>
+                            <div>控制方: ${getFactionName(region.owner)}</div>
+                            <div class="health-bar">
+                                <div class="health-fill ${regionBattleStatus.isEnemyControlled ? 'enemy' : ''}" style="width: ${regionControlChange.currentControl}%"></div>
+                            </div>
+                            <div class="region-metrics">
+                                <div class="metric">
+                                    <span>真实控制度:</span>
+                                    <span class="metric-value ${regionBattleStatus.isEnemyControlled ? 'enemy' : regionControlChange.currentControl > 30 ? 'positive' : 'negative'}">${regionControlChange.currentControl.toFixed(1)}%</span>
+                                </div>
+                                <div class="metric">
+                                    <span>变化率:</span>
+                                    <span class="metric-value ${regionControlChange.changeRate > 0 ? 'positive' : regionControlChange.changeRate < 0 ? 'negative' : 'neutral'}">(${(regionControlChange.changeRate-3600*region.regerPerSecond/region.maxHealth*100).toFixed(2)} - ${(-3600*region.regerPerSecond/region.maxHealth*100).toFixed(2)})${regionControlChange.changeRate.toFixed(2)}%/h</span>
+                                </div>
+                                <div class="metric">
+                                    <span>玩家数:</span>
+                                    <span class="metric-value ${region.players > 0 ? 'positive' : 'neutral'}">${region.players}</span>
+                                </div>
+                                <div class="metric">
+                                    <span>沦陷/完全占领:</span>
+                                    <span class="metric-value">${regionControlChange.changeRate > 0 ? (((region.owner===1?100:0) - regionControlChange.currentControl) / regionControlChange.changeRate).toFixed(2) : regionControlChange.changeRate < 0 ?( ((region.owner===1?0:-100) - regionControlChange.currentControl) / regionControlChange.changeRate).toFixed(2) : '-'}h</span>
+                                </div>
+                                <div class="metric">
+                                    <span>优先级:</span>
+                                    <span class="metric-value ${regionBattleStatus.priority >= 4 ? 'negative' : 'neutral'}">${regionBattleStatus.priority}/5</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+                
+                // 加载地区历史数据用于图表
+                await loadRegionHistoryData(planetIndex);
+                
+            } catch (error) {
+                console.error('获取星球详情失败:', error);
+                document.getElementById('planetDetails').innerHTML = 
+                    '<div class="error">星球详情加载失败</div>';
+            }
+        }
+
+        async function loadRegionHistoryData(planetIndex) {
+            try {
+                const planetData = currentPlanetData.sectors;
+                let targetPlanet = null;
+                
+                // 找到目标星球
+                Object.values(planetData).forEach(planets => {
+                    planets.forEach(planet => {
+                        if (planet.index === planetIndex) {
+                            targetPlanet = planet;
+                        }
+                    });
+                });
+                
+                if (targetPlanet == null) return;
+                
+                // 获取星球详情以获取地区信息
+                const response = await fetch(`/api/planet-details/${planetIndex}`);
+                const planetDetails = await response.json();
+                
+                // 为每个地区获取历史数据
+                const promises = planetDetails.regions.map(region => 
+                    fetch(`/api/region-health-history/${planetIndex}/${region.regionIndex}?hours=6&limit=10`)
+                        .then(response => response.json())
+                        .then(data => {
+                            planetHistoryData[`${planetIndex}_${region.regionIndex}`] = data;
+                        })
+                        .catch(error => console.error(`获取地区 ${planetIndex}_${region.regionIndex} 历史数据失败:`, error))
+                );
+                
+                await Promise.all(promises);
+            } catch (error) {
+                console.error('获取地区历史数据失败:', error);
+            }
+        }
+
+        function calculateRealRegionStats(regions, planetIndex) {
+            let contestedRegions = 0;
+            let criticalRegions = 0;
+            let activeRegions = 0;
+            let enemyControlledRegions = 0;
+            let totalPlayers = 0;
+            
+            regions.forEach(region => {
+                totalPlayers += region.players;
+                
+                if (region.players > 0) activeRegions++;
+                if (region.owner !== 1) enemyControlledRegions++;
+                
+                // 基于真实数据计算
+                const controlChange = calculateRealControlChange(region.health, region.maxHealth, planetIndex, region.owner, region.regionIndex);
+                const battleStatus = analyzeRealBattleStatus(region, controlChange, region.owner);
+                
+                if (battleStatus.status === 'critical') criticalRegions++;
+                if (Math.abs(controlChange.changeRate) > 3) contestedRegions++;
+            });
+            
+            return {
+                contestedRegions: contestedRegions,
+                criticalRegions: criticalRegions,
+                activeRegions: activeRegions,
+                enemyControlledRegions: enemyControlledRegions,
+                totalPlayers: totalPlayers
+            };
+        }
+
+        async function selectRegion(planetIndex, regionIndex) {
+            document.querySelectorAll('.region-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            event.target.closest('.region-card').classList.add('selected');
+            
+            currentSelectedRegion = regionIndex;
+            
+            await loadRegionHealthChart(planetIndex, regionIndex);
+            document.getElementById('regionCharts').classList.add('active');
+        }
+
+        async function loadRegionHealthChart(planetIndex, regionIndex, timeRange = document.getElementById('regionTimeRange')?.value || 24) {
+            try {
+                const url = regionIndex===-1?`/api/planet-health-history/${planetIndex}?hours=${timeRange}&limit=1000`:`/api/region-health-history/${planetIndex}/${regionIndex}?hours=${timeRange}&limit=1000`;
+                const response = await fetch(url);
+                const healthData = await response.json();
+                
+                if (healthData.length > 0) {
+                    const labels = healthData.map(d => formatTimestamp(d.timestamp));
+                    
+                    // 计算真实占领度数据
+                    const controlData = [];
+                    const controlChangeRates = [];
+                    //const maxHealth = healthData[0] ? (healthData.find(d => d.health > 0)?.health * 2 || 600000) : 600000; // 估算最大生命值
+                    const res = await fetch(`/api/planet-details/${planetIndex}`);
+                    const maxHealthData = await res.json();
+                    const maxHealth = regionIndex===-1?maxHealthData.planet.max_health:maxHealthData.regions[regionIndex].maxHealth;
+                    
+                    healthData.forEach((dataPoint, index) => {
+                        const control = ((dataPoint.owner!==1?-dataPoint.health:dataPoint.health) / maxHealth) * 100;
+                        //controlData.push(Math.min(100, Math.max(0, control)));
+                        controlData.push(control);
+                        
+                        if (index > 0) {
+                            const prevControl = ((healthData[index - 1].owner!==1?-healthData[index - 1].health:healthData[index - 1].health) / maxHealth) * 100;
+                            const timeDiff = (dataPoint.timestamp - healthData[index - 1].timestamp) / 3600; // 小时
+                            const changeRate = timeDiff > 0 ? (control - prevControl) / timeDiff : 0;
+                            controlChangeRates.push(changeRate);
+                        } else {
+                            controlChangeRates.push(null);
+                        }
+                    });
+                    
+                    // 更新生命值图表
+                    allChartsData.regionHealthChart.data.labels = labels;
+                    allChartsData.regionHealthChart.data.datasets[0].data = healthData.map(d => d.owner!==1?-d.health:d.health);
+                    allChartsData.regionHealthChart.data.datasets[1].data = healthData.map(d => d.players);
+                    
+                    // 更新真实控制度图表
+                    allChartsData.regionControlChart.data.labels = labels;
+                    allChartsData.regionControlChart.data.datasets[0].data = controlData;
+                    allChartsData.regionControlChart.data.datasets[1].data = controlChangeRates;
+                    
+                    // 更新图表标题
+                    document.querySelector('#regionCharts .chart-title').textContent = 
+                        regionIndex === -1 ? 
+                        `星球 #${planetIndex} - 生命值与玩家分析` : 
+                        `星球 #${planetIndex} 地区 #${regionIndex} - 生命值与玩家分析`;
+                    
+                    allChartsData.regionHealthChart.update('none');
+                    allChartsData.regionControlChart.update('none');
+                }
+            } catch (error) {
+                console.error('加载地区分析图表失败:', error);
+            }
+        }
+        
+        // 新闻功能函数
+        async function loadNewsData(reset = false) {
+            if (newsIsLoading) return;
+            
+            if (reset) {
+                newsCurrentPage = 0;
+                newsData = [];
+                newsHasMore = true;
+                document.getElementById('newsFeed').innerHTML = '<div class="news-loading">📡 正在获取最新战争情报...</div>';
+            }
+            
+            newsIsLoading = true;
+            
+            try {
+                const params = new URLSearchParams({
+                    limit: newsPageSize,
+                    offset: newsCurrentPage * newsPageSize
+                });
+                
+                if (newsCurrentFilter) {
+                    params.append('type', newsCurrentFilter);
+                }
+                
+                const response = await fetch(`/api/news?${params}`);
+                const data = await response.json();
+                
+                if (data.news && data.news.length > 0) {
+                    newsData = reset ? data.news : [...newsData, ...data.news];
+                    newsHasMore = data.has_more;
+                    newsCurrentPage++;
+                    
+                    displayNewsFeed();
+                    updateNewsStats(data.total_count);
+                } else {
+                    newsHasMore = false;
+                    if (newsData.length === 0) {
+                        document.getElementById('newsFeed').innerHTML = '<div class="news-empty">📭 暂无新闻数据</div>';
+                    }
+                }
+                
+            } catch (error) {
+                console.error('获取新闻数据失败:', error);
+                document.getElementById('newsFeed').innerHTML = '<div class="news-error">❌ 新闻加载失败，请稍后重试</div>';
+            } finally {
+                newsIsLoading = false;
+            }
+        }
+        
+        function displayNewsFeed() {
+            const container = document.getElementById('newsFeed');
+            
+            if (newsData.length === 0) {
+                container.innerHTML = '<div class="news-empty">📭 暂无新闻数据</div>';
+                return;
+            }
+            
+            let html = '';
+            
+            newsData.forEach(news => {
+                const isBreaking = isNewsBreaking(news);
+                const formattedContent = formatNewsContent(news.message);
+                const timeAgo = getTimeAgo(news.published);
+                
+                html += `
+                    <div class="news-item type-${news.type} ${isBreaking ? 'breaking' : ''}" data-news-id="${news.id}">
+                        <div class="news-meta">
+                            <div class="news-timestamp">
+                                <span>🕐 ${timeAgo}</span>
+                                <span style="margin-left: 10px; opacity: 0.7;">${formatTimestamp(news.published)}</span>
+                            </div>
+                            <div class="news-type-badge type-${news.type}">
+                                ${getNewsTypeName(news.type)}
+                            </div>
+                        </div>
+                        
+                        <div class="news-content">
+                            ${formattedContent}
+                        </div>
+                        
+                        ${news.tagIds && news.tagIds.length > 0 ? `
+                            <div class="news-tags">
+                                ${news.tagIds.map(tag => `<span class="news-tag">#${tag}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            });
+            
+            // 添加加载更多或结束提示
+            if (newsHasMore) {
+                html += '<div class="news-loading-more" id="newsLoadingMore">正在加载更多新闻...</div>';
+            } else if (newsData.length > 0) {
+                html += '<div class="news-end-message active">📜 已显示所有新闻</div>';
+            }
+            
+            container.innerHTML = html;
+            
+            // 设置滚动监听
+            setupNewsScrollListener();
+        }
+        
+        function setupNewsScrollListener() {
+            const container = document.getElementById('newsFeed');
+            
+            container.removeEventListener('scroll', handleNewsScroll);
+            container.addEventListener('scroll', handleNewsScroll);
+        }
+        
+        function handleNewsScroll() {
+            if (newsIsLoading || !newsHasMore) return;
+            
+            const container = document.getElementById('newsFeed');
+            const scrollPosition = container.scrollTop + container.clientHeight;
+            const scrollHeight = container.scrollHeight;
+            
+            // 当滚动到底部80%时开始加载
+            if (scrollPosition >= scrollHeight * 0.8) {
+                const loadingMore = document.getElementById('newsLoadingMore');
+                if (loadingMore) {
+                    loadingMore.classList.add('active');
+                }
+                loadNewsData(false);
+            }
+        }
+        
+        function formatNewsContent(content) {
+            if (!content) return '<em>暂无内容</em>';
+            
+            // 处理特殊格式标记
+            let formattedContent = content
+                .replace(/<i=1>(.*?)<\/i>/g, '<span style="color: #4CAF50; font-weight: bold;">$1</span>')
+                .replace(/<i=3>(.*?)<\/i>/g, '<span style="color: #f44336; font-weight: bold; text-transform: uppercase;">$1</span>')
+                .replace(/\n/g, '<br>');
+            
+            // 将内容分段
+            const paragraphs = formattedContent.split('<br><br>');
+            return paragraphs.map(p => `<p>${p}</p>`).join('');
+        }
+        
+        function getNewsTypeName(type) {
+            const types = {
+                0: '常规',
+                1: '重要',
+                2: '战况',
+                3: '警报'
+            };
+            return types[type] || '未知';
+        }
+        
+        function isNewsBreaking(news) {
+            // 判断新闻是否为突发新闻（最近2小时内发布的重要新闻）
+            const now = Date.now() / 1000;
+            const twoHoursAgo = now - (2 * 3600);
+            
+            return news.type >= 2 && news.published > twoHoursAgo;
+        }
+        
+        function getTimeAgo(timestamp) {
+            const now = Date.now() / 1000;
+            const diff = now - timestamp;
+            
+            if (diff < 3600) {
+                const minutes = Math.floor(diff / 60);
+                return `${minutes}分钟前`;
+            } else if (diff < 86400) {
+                const hours = Math.floor(diff / 3600);
+                return `${hours}小时前`;
+            } else {
+                const days = Math.floor(diff / 86400);
+                return `${days}天前`;
+            }
+        }
+        
+        async function updateNewsStats(totalCount = null) {
+            try {
+                if (totalCount === null) {
+                    const response = await fetch('/api/news/stats');
+                    newsStats = await response.json();
+                } else {
+                    newsStats.total_count = totalCount;
+                }
+                
+                const statsElement = document.getElementById('newsStats');
+                if (statsElement) {
+                    statsElement.innerHTML = `
+                        共 ${newsStats.total_count || 0} 条新闻
+                        ${newsStats.recent_24h_count ? `(24h内新增 ${newsStats.recent_24h_count} 条)` : ''}
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('获取新闻统计失败:', error);
+            }
+        }
+        
+        function filterNewsByType() {
+            const filterSelect = document.getElementById('newsTypeFilter');
+            newsCurrentFilter = filterSelect.value;
+            loadNewsData(true);
+        }
+        
+        function refreshNews() {
+            const refreshBtn = document.getElementById('refreshNewsBtn');
+            refreshBtn.innerHTML = '🔄 刷新中...';
+            refreshBtn.disabled = true;
+            
+            loadNewsData(true).finally(() => {
+                refreshBtn.innerHTML = '🔄 刷新新闻';
+                refreshBtn.disabled = false;
+            });
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCurrentTime();
+            setInterval(updateCurrentTime, 1000);
+            
+            initializeCharts();
+            fetchAndUpdateData();
+            updatePlayerDistribution();
+            updatePlanetHealthTrend();
+            updateOrdersData();
+            updateRegionChartsData();
+    
+            // 初始化新闻统计
+            updateNewsStats();
+            
+            // 每5分钟更新一次数据
+            setInterval(() => {
+                fetchAndUpdateData();
+                updateOrdersData();
+                updateRegionChartsData();
+        
+                // 如果当前在新闻标签页，刷新新闻统计
+                if (document.getElementById('news').classList.contains('active')) {
+                    updateNewsStats();
+                }
+                
+                if (typeof currentSelectedPlanet !== 'undefined' && currentSelectedPlanet != null) {
+                    displayPlanetDetails(currentSelectedPlanet);
+                }
+                if (typeof currentSelectedPlanet !== 'undefined' && typeof currentSelectedRegion !== 'undefined' && currentSelectedPlanet != null && currentSelectedRegion != null) {
+                    loadRegionHealthChart(currentSelectedPlanet, currentSelectedRegion);
+                }
+                if (typeof currentSelectedOrder !== 'undefined' && currentSelectedOrder != null) {
+                    const timeRange = document.getElementById('ordersTimeRange')?.value || 48;
+                    displayOrderDetails(currentSelectedOrder, timeRange);
+                }
+            }, 300000);
+        });
+    </script>
+</body>
+</html>
