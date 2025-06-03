@@ -2199,7 +2199,7 @@
                 
                 for (let i = 0; i < top5Planets.length; i++) {
                     const planet = top5Planets[i];
-                    const healthResponse = await fetch(`/api/planet-health-history/${planet.index}?hours=${timeRange}&limit=30`);
+                    const healthResponse = await fetch(`/api/planet-health-history/${planet.index}?hours=${timeRange}&limit=1000`);
                     const healthData = await healthResponse.json();
                     
                     const res = await fetch(`/api/planet-details/${planet.index}`);
