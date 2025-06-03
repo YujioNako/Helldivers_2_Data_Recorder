@@ -545,7 +545,7 @@ def news_list():
             
             news_item = {
                 'id': row[0],
-                'published': row[1],
+                'published': row[1]+1707934320,
                 'type': row[2],
                 'tagIds': tag_ids,
                 'message': message,
@@ -599,7 +599,7 @@ def latest_news():
             
             news_item = {
                 'id': row[0],
-                'published': row[1],
+                'published': row[1]+1707934320,
                 'type': row[2],
                 'tagIds': tag_ids,
                 'message': message,
@@ -644,7 +644,7 @@ def news_detail(news_id):
         
         news_item = {
             'id': data[0],
-            'published': data[1],
+            'published': data[1]+1707934320,
             'type': data[2],
             'tagIds': tag_ids,
             'message': message,
@@ -730,8 +730,8 @@ def news_stats():
         
         return jsonify({
             'total_count': total_count,
-            'latest_published': latest_published,
-            'earliest_published': earliest_published,
+            'latest_published': latest_published+1707934320,
+            'earliest_published': earliest_published+1707934320,
             'recent_24h_count': recent_count,
             'type_breakdown': type_breakdown
         })
