@@ -1103,7 +1103,7 @@
             </div>
             
             <div class="chart-container">
-                <div class="chart-title">玩家活跃度分析</div>
+                <div class="chart-title">区域控制度分析</div>
                 <div class="chart-wrapper">
                     <canvas id="playerActivityChart"></canvas>
                 </div>
@@ -1284,7 +1284,7 @@
                     <canvas id="warIntensityChart"></canvas>
                 </div>
             </div>
-            <div class="chart-container">
+            <div class="chart-container" style="display: none;">
                 <div class="chart-title">阵营控制变化</div>
                 <div class="chart-wrapper">
                     <canvas id="factionControlChart"></canvas>
@@ -1296,7 +1296,7 @@
                     <canvas id="resourceEfficiencyChart"></canvas>
                 </div>
             </div>
-            <div class="chart-container">
+            <div class="chart-container" style="display: none;">
                 <div class="chart-title">任务类型分析</div>
                 <div class="chart-wrapper">
                     <canvas id="missionTypeChart"></canvas>
@@ -1329,7 +1329,7 @@
             if (num >= 1e9) return (num / 1e9).toFixed(1) + 'B';
             if (num >= 1e6) return (num / 1e6).toFixed(1) + 'M';
             if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
-            return num.toString();
+            return num.toFixed(2).toString();
         }
 
         function formatTimestamp(timestamp, needYear = true) {
@@ -1343,8 +1343,8 @@
         
         // 计算真实占领度和变化率（基于历史数据）
         function calculateRealControlChange(currentHealth, maxHealth, planetIndex, owner, regionIndex = null) {
-            if(owner !== 1) { currentHealth = -currentHealth };
-            let currentControl = (currentHealth / maxHealth) * 100;
+            //if(owner !== 1) { currentHealth = -currentHealth };
+            //let currentControl = (currentHealth / maxHealth) * 100;
             
             // 从历史数据中计算变化率
             const historyKey = regionIndex !== null ? `${planetIndex}_${regionIndex}` : `${planetIndex}`;
@@ -1355,6 +1355,7 @@
                     const previousData = history[history.length - 2];
                     const currentData = history[history.length - 1];
                     
+                    const currentControl = ((owner !== 1?-currentData.health:currentData.health) / maxHealth) * 100;
                     const previousControl = ((owner !== 1?-previousData.health:previousData.health) / maxHealth) * 100;
                     const timeDiff = (currentData.timestamp - previousData.timestamp) / 3600; // 小时
                     
@@ -1370,7 +1371,7 @@
                 }
             } else {
                 let previousControl = 0;
-                currentControl = 0;
+                let currentControl = 0;
                 let timeDiff = null;
                 for(regionIndex=0; ; regionIndex++) {
                     if (planetHistoryData[historyKey+'_'+regionIndex] && planetHistoryData[historyKey+'_'+regionIndex].length > 1) {
@@ -1719,14 +1720,14 @@
                 }
             });
 
-            // 玩家活跃度分析图表
+            // 区域控制度分析图表
             const playerActivityCtx = document.getElementById('playerActivityChart').getContext('2d');
             allChartsData.playerActivityChart = new Chart(playerActivityCtx, {
                 type: 'line',
                 data: {
                     labels: [],
                     datasets: [{
-                        label: '活跃玩家比例(%)',
+                        label: '超级地球控制比例(%)',
                         data: [],
                         borderColor: '#FF5722',
                         backgroundColor: 'rgba(255, 87, 34, 0.1)',
@@ -1788,7 +1789,7 @@
             allChartsData.warIntensityChart = new Chart(warIntensityCtx, {
                 type: 'radar',
                 data: {
-                    labels: ['总玩家数', '活跃星球', '激战地区', '任务成功率', '击杀效率', '资源收集'],
+                    labels: ['总玩家数', '控制星球', '任务成功率', '击杀效率', '资源收集'],
                     datasets: [{
                         label: '战争强度',
                         data: [],
@@ -2023,7 +2024,7 @@
                     allChartsData.warStatusChart.data.datasets[2].data = warStatusData.map(d => d.total_players);
                     allChartsData.warStatusChart.update('none');
                     
-                    // 更新玩家活跃度图表
+                    // 更新区域控制度图表
                     const totalPlanets = warStatusData.map(d => d.super_earth_planets + d.enemy_planets);
                     const activePlanetsRatio = warStatusData.map((d, i) => {
                         const total = totalPlanets[i];
@@ -2091,13 +2092,14 @@
                     
                     // 更新战争强度雷达图
                     const latestStats = warStatsData[warStatsData.length - 1];
+                    const previousStats = warStatsData[warStatsData.length - 2];
                     const latestWarStatus = warStatusData[warStatusData.length - 1];
+                    const timeDiff = (latestStats.timestamp - previousStats.timestamp) / 3600;
                     const intensityData = [
                         Math.min(latestWarStatus.total_players / 100000 * 100, 100), // 总玩家数标准化
-                        Math.min(latestWarStatus.super_earth_planets / 50 * 100, 100), // 活跃星球标准化
-                        Math.min(latestWarStatus.enemy_planets / 30 * 100, 100), // 激战地区标准化
+                        Math.min(latestWarStatus.super_earth_planets / (latestWarStatus.super_earth_planets + latestWarStatus.enemy_planets) * 100, 100), // 活跃星球标准化
                         latestStats.mission_success_rate, // 任务成功率
-                        Math.min((latestStats.bug_kills + latestStats.automaton_kills + latestStats.illuminate_kills) / 1e12 * 100, 100), // 击杀效率标准化
+                        Math.min(timeDiff !== 0 ? (((latestStats.bug_kills + latestStats.automaton_kills + latestStats.illuminate_kills) - (previousStats.bug_kills + previousStats.automaton_kills + previousStats.illuminate_kills)) / timeDiff / 1e8 * 100) : 0, 100), // 击杀效率标准化
                         Math.min(latestStats.accuracy, 100) // 射击准确率
                     ];
                     allChartsData.warIntensityChart.data.datasets[0].data = intensityData;
@@ -2120,7 +2122,7 @@
                     for (let i = 1; i < resourcesData.length; i++) {
                         const current = resourcesData[i];
                         const previous = resourcesData[i - 1];
-                        const timeDiff = (current.timestamp - previous.timestamp) / 3600; // 小时
+                        const timeDiff = (previous.timestamp - current.timestamp) / 3600; // 小时
                         const valueDiff = current.current_value - previous.current_value;
                         const efficiency = timeDiff > 0 ? valueDiff / timeDiff : 0;
                         efficiencyData.push(Math.max(0, efficiency));
@@ -3340,7 +3342,7 @@
             updateNewsStats();
             
             // 每5分钟更新一次数据
-            setInterval(() => {
+            setInterval(async () => {
                 fetchAndUpdateData();
                 updateOrdersData();
                 updateRegionChartsData();
@@ -3351,6 +3353,7 @@
                 }
                 
                 if (typeof currentSelectedPlanet !== 'undefined' && currentSelectedPlanet != null) {
+                    await fetchPlanetDataWithRetry(currentSelectedPlanet);
                     displayPlanetDetails(currentSelectedPlanet);
                 }
                 if (typeof currentSelectedPlanet !== 'undefined' && typeof currentSelectedRegion !== 'undefined' && currentSelectedPlanet != null && currentSelectedRegion != null) {
